@@ -22,3 +22,4 @@ dependencyResolutionManagement {
 rootProject.name = "NoVM"
 include(":app")
 include(":proc")
+include(":lib")

@@ -1,6 +1,6 @@
 package com.forsyth.novm
 
-enum class StateLossEvent {
+enum class StateDestroyingEvent {
     CONFIGURATION_CHANGE,
     PROCESS_DEATH
 }

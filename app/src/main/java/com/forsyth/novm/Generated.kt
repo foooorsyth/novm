@@ -8,12 +8,10 @@ import androidx.appcompat.app.AppCompatActivity
 class MainActivityState {
     var isToggled = false
 }
-*/
-
-// TODO write this next
 class StateHolder {
     var mainActivityState: MainActivityState? = null
 }
+ */
 // TODO then this
 class StateSaver {
     companion object {

@@ -6,18 +6,20 @@ import com.google.devtools.ksp.getClassDeclarationByName
 import com.google.devtools.ksp.isLocal
 import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.Dependencies
-import com.google.devtools.ksp.processing.KSBuiltIns
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
+import com.google.devtools.ksp.symbol.KSType
+import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.ksp.toTypeName
 import com.squareup.kotlinpoet.ksp.writeTo
+import java.util.Locale
 
 
 const val COMPONENT_ACTIVITY_QUALIFIED_NAME = "androidx.appcompat.app.AppCompatActivity"
@@ -68,11 +70,27 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
         }
         val fileName = "NoVMGenerated"
         val packageName = resolver.getClassDeclarationByName(activityToStateMap.keys.first())!!.packageName.asString() // TODO improve, get app package name from manifest
-        val stateHolderTypeSpecs = generateStateHoldersForActivities(resolver, activityToStateMap)
+        val stateHoldersForActivities = generateStateHoldersForActivities(resolver, activityToStateMap)
+        val topLevelStateHolder = generateTopLevelStateHolder(packageName, stateHoldersForActivities)
         val fileSpec = FileSpec.builder(packageName, fileName)
-            .addTypes(stateHolderTypeSpecs)
+            .addTypes(stateHoldersForActivities)
+            .addType(topLevelStateHolder)
             .build()
         fileSpec.writeTo(codeGenerator, Dependencies(true, *activityContainingFiles.toTypedArray()))
+    }
+
+    private fun generateTopLevelStateHolder(packageName: String, stateHoldersForActivities: List<TypeSpec>) : TypeSpec {
+        val builder = TypeSpec.classBuilder("StateHolder")
+        stateHoldersForActivities.forEach { typeSpec ->
+            builder.addProperty(
+                PropertySpec.builder(typeSpec.name!!.replaceFirstChar { it.lowercase(Locale.getDefault()) }, ClassName(packageName, typeSpec.name!!).copy(nullable = true))
+                    .mutable(true)
+                    .initializer("%L", null)
+                    .build()
+            )
+
+        }
+        return builder.build()
     }
 
     @OptIn(KspExperimental::class)
@@ -85,26 +103,17 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
             entry.value.forEach { propDecl ->
                 val stateAnn = propDecl.getAnnotationsByType(State::class).toList().first()
                 // only put into the state holder if we're retaining across config change
-                if (stateAnn.retainAcross == StateLossEvent.CONFIGURATION_CHANGE) {
-                    propDecl.type.toTypeName().isNullable
+                if (stateAnn.retainAcross == StateDestroyingEvent.CONFIGURATION_CHANGE) {
                     val resolvedType = propDecl.type.resolve()
-                    val propBuilder = PropertySpec.builder(propDecl.simpleName.asString(), resolvedType.toTypeName())
+                    val canUseDefaultVal = isBuiltInWithDefaultValue(resolver, resolvedType)
+                    val propBuilder = PropertySpec.builder(
+                            propDecl.simpleName.asString(),
+                            if (canUseDefaultVal) resolvedType.toTypeName() else resolvedType.makeNullable().toTypeName()
+                    )
                         .mutable(true)
 
-                    if (resolvedType.isMarkedNullable) {
-                        when (resolvedType.makeNotNullable()) {
-                            resolver.builtIns.booleanType,
-                            resolver.builtIns.stringType,
-                            resolver.builtIns.intType,
-                            resolver.builtIns.longType,
-                            resolver.builtIns.floatType,
-                            resolver.builtIns.doubleType -> {
-                                propBuilder.initializer("%L", null)
-                            }
-                            else -> {
-                                logger.error("unsupported type")
-                            }
-                        }
+                    if (!canUseDefaultVal) {
+                        propBuilder.initializer("%L", null)
                     } else {
                         when (resolvedType) {
                             resolver.builtIns.booleanType, -> {
@@ -112,9 +121,6 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                             }
                             resolver.builtIns.stringType -> {
                                 propBuilder.initializer("%L", "")
-                            }
-                            resolver.builtIns.intType -> {
-                                propBuilder.initializer("%L", 0)
                             }
                             resolver.builtIns.longType -> {
                                 propBuilder.initializer("%L", 0L)
@@ -124,6 +130,13 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                             }
                             resolver.builtIns.doubleType -> {
                                 propBuilder.initializer("%L", 0.0)
+                            }
+                            resolver.builtIns.intType,
+                            resolver.builtIns.byteType,
+                            resolver.builtIns.shortType,
+                            resolver.builtIns.charType,
+                            resolver.builtIns.numberType -> {
+                                propBuilder.initializer("%L", 0)
                             }
                             else -> {
                                 logger.error("unsupported type")
@@ -139,6 +152,26 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
             ret.add(typeSpecBuilder.build())
         }
         return ret
+    }
+
+    private fun isBuiltInWithDefaultValue(resolver: Resolver, ksType: KSType) : Boolean {
+        return when (ksType) {
+            resolver.builtIns.booleanType,
+            resolver.builtIns.stringType,
+            resolver.builtIns.intType,
+            resolver.builtIns.longType,
+            resolver.builtIns.floatType,
+            resolver.builtIns.doubleType,
+            resolver.builtIns.byteType,
+            resolver.builtIns.shortType,
+            resolver.builtIns.charType,
+            resolver.builtIns.numberType -> {
+                true
+            }
+            else -> {
+                false
+            }
+        }
     }
 
     private fun isSubclassOf(clazz: KSClassDeclaration, qualifiedNameOfSuper: String) : Boolean {

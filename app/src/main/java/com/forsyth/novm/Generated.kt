@@ -13,6 +13,7 @@ class StateHolder {
 }
 
  */
+/*
 class StateSaver {
     companion object {
         const val KEY_MAINACTIVITY_MYTEXT = "MainActivity_myText"
@@ -57,7 +58,8 @@ class StateSaver {
     }
 
 }
-open class ComponentActivity : AppCompatActivity() {
+ */
+open class StateSavingActivity : AppCompatActivity() {
 
     val stateSaver = StateSaver()
 

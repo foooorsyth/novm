@@ -15,6 +15,8 @@ import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
+import com.squareup.kotlinpoet.FunSpec
+import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.ksp.toTypeName
@@ -72,12 +74,19 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
         val packageName = resolver.getClassDeclarationByName(activityToStateMap.keys.first())!!.packageName.asString() // TODO improve, get app package name from manifest
         val stateHoldersForActivities = generateStateHoldersForActivities(resolver, activityToStateMap)
         val topLevelStateHolder = generateTopLevelStateHolder(packageName, stateHoldersForActivities)
+        val stateSaver = generateStateSaver(packageName,
+            resolver,
+            activityToStateMap,
+            topLevelStateHolder,
+            stateHoldersForActivities
+            )
         val fileSpec = FileSpec.builder(packageName, fileName)
             .addImport("android.os", "Bundle")
             .addImport("androidx.annotation", "CallSuper")
             .addImport("androidx.appcompat.app", "AppCompatActivity")
-            .addTypes(stateHoldersForActivities)
+            .addTypes(stateHoldersForActivities.values)
             .addType(topLevelStateHolder)
+            .addType(stateSaver)
             /*
             .addCode("\nopen class StateSavingActivity : AppCompatActivity() {\n" +
                     "\n" +
@@ -116,17 +125,94 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
         fileSpec.writeTo(codeGenerator, Dependencies(true, *activityContainingFiles.toTypedArray()))
     }
 
-    private fun generateStateSaver(packageName: String) {
-
+    private fun generateStateSaver(packageName: String,
+                                   resolver: Resolver,
+                                   activityToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>>,
+                                   topLevelStateHolder: TypeSpec,
+                                   stateHoldersForActivities: MutableMap<String, TypeSpec>,
+                                   ) : TypeSpec {
+        val builder = TypeSpec.classBuilder("StateSaver")
+            .addFunction(
+                generateSaveStateConfigChange(
+                    packageName,
+                    resolver,
+                    activityToStateMap,
+                    topLevelStateHolder,
+                    stateHoldersForActivities
+                )
+            )
+            .addFunction(
+                generateRestoreStateConfigChange(
+                    packageName,
+                    resolver,
+                    activityToStateMap,
+                    topLevelStateHolder,
+                    stateHoldersForActivities
+                )
+            )
+        return builder.build()
     }
 
-    private fun generateTopLevelStateHolder(packageName: String, stateHoldersForActivities: List<TypeSpec>) : TypeSpec {
+    private fun generateRestoreStateConfigChange(
+        packageName: String,
+        resolver: Resolver,
+        activityToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>>,
+        topLevelStateHolder: TypeSpec,
+        stateHoldersForActivities: MutableMap<String, TypeSpec>) : FunSpec {
+        val funBuilder = FunSpec.builder("restoreStateConfigChange")
+        // TODO implement
+        return funBuilder.build()
+    }
+    private fun generateSaveStateConfigChange(
+        packageName: String,
+           resolver: Resolver,
+           activityToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>>,
+           topLevelStateHolder: TypeSpec,
+           stateHoldersForActivities: MutableMap<String, TypeSpec>,
+        ) : FunSpec {
+        // TODO use topLevelStateHolder typeSpec and stateHoldersForActivities
+        // TODO instead of manually recreating names below
+        val funBuilder = FunSpec.builder("saveStateConfigChange")
+            .addParameter(
+                ParameterSpec.builder(
+                    "activity",
+                    ClassName("androidx.activity", "ComponentActivity")
+                )
+                    .build()
+            )
+            .returns(ClassName(packageName, "StateHolder"))
+            .addStatement("val stateHolder = StateHolder()")
+            .beginControlFlow("when (activity) {")
+
+        activityToStateMap.forEach { entry ->
+            val classDeclOfActivity = resolver.getClassDeclarationByName(entry.key)!!
+            funBuilder.beginControlFlow("is ${entry.key} -> {")
+            val activityStateHolderFieldName = "${lowercaseFirstLetter(classDeclOfActivity.simpleName.asString())}State"
+            funBuilder.addStatement(
+                "stateHolder.$activityStateHolderFieldName = ${classDeclOfActivity.simpleName.asString()}State()"
+            )
+            entry.value.forEach { propertyDecl ->
+                val resolveTypeOfProp = propertyDecl.type.resolve()
+                // during save, nullability doesn't matter
+                funBuilder.addStatement(
+                    "stateHolder.$activityStateHolderFieldName!!.${propertyDecl.simpleName.asString()} = activity.${propertyDecl.simpleName.asString()}"
+                )
+            }
+            funBuilder.endControlFlow() // end is
+        }
+
+        funBuilder.endControlFlow() // close when
+            .addStatement("return stateHolder")
+        return funBuilder.build()
+    }
+
+    private fun generateTopLevelStateHolder(packageName: String, stateHoldersForActivities: MutableMap<String, TypeSpec>) : TypeSpec {
         val builder = TypeSpec.classBuilder("StateHolder")
-        stateHoldersForActivities.forEach { typeSpec ->
+        stateHoldersForActivities.forEach { entry ->
             builder.addProperty(
                 PropertySpec.builder(
-                    typeSpec.name!!.replaceFirstChar { it.lowercase(Locale.getDefault()) },
-                    ClassName(packageName, typeSpec.name!!).copy(nullable = true)
+                    lowercaseFirstLetter(entry.value.name!!),
+                    ClassName(packageName, entry.value.name!!).copy(nullable = true)
                 )
                     .mutable(true)
                     .initializer("%L", null)
@@ -137,10 +223,12 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
         return builder.build()
     }
 
+    private fun lowercaseFirstLetter(str: String) = str.replaceFirstChar { it.lowercase(Locale.getDefault()) }
+
     @OptIn(KspExperimental::class)
     private fun generateStateHoldersForActivities(resolver: Resolver,
-                                                  activityToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>>) : List<TypeSpec> {
-        val ret = mutableListOf<TypeSpec>()
+                                                  activityToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>>) : MutableMap<String, TypeSpec> {
+        val ret = mutableMapOf<String, TypeSpec>()
         activityToStateMap.forEach { entry ->
             val activityName = resolver.getClassDeclarationByName(entry.key)!!.simpleName.asString()
             val typeSpecBuilder = TypeSpec.classBuilder(activityName + "State") // TODO dangerous, check for collisions
@@ -193,7 +281,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                     )
                 }
             }
-            ret.add(typeSpecBuilder.build())
+            ret[entry.key] =  typeSpecBuilder.build()
         }
         return ret
     }
@@ -234,10 +322,10 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
     }
 
     override fun finish() {
-        logger.info("finished")
+        logger.info("novm finished")
     }
 
     override fun onError() {
-        logger.info("onError")
+        logger.info("novm onError")
     }
 }

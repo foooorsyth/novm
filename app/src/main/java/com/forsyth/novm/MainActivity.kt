@@ -4,7 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import com.forsyth.novm.StateDestroyingEvent.CONFIGURATION_CHANGE
 
-class MainActivity : ComponentActivity() {
+class MainActivity : StateSavingActivity() {
 
     @State(retainAcross = CONFIGURATION_CHANGE)
     var isToggled = false

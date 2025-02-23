@@ -159,8 +159,49 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
         activityToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>>,
         topLevelStateHolder: TypeSpec,
         stateHoldersForActivities: MutableMap<String, TypeSpec>) : FunSpec {
+        // TODO use topLevelStateHolder typeSpec and stateHoldersForActivities
+        // TODO instead of manually recreating names below
         val funBuilder = FunSpec.builder("restoreStateConfigChange")
-        // TODO implement
+            .addParameter(
+                ParameterSpec.builder(
+                    "activity",
+                    ClassName("androidx.activity", "ComponentActivity")
+                )
+                    .build()
+            )
+            .addParameter(
+                ParameterSpec.builder(
+                    "stateHolder",
+                    ClassName(packageName, "StateHolder")
+                )
+                    .build()
+            )
+            .beginControlFlow("when (activity) {")
+
+
+        activityToStateMap.forEach { activityToStateEntry ->
+            val classDeclOfActivity = resolver.getClassDeclarationByName(activityToStateEntry.key)!!
+            funBuilder.beginControlFlow("is ${activityToStateEntry.key} -> {")
+            val activityStateHolderFieldName = "${lowercaseFirstLetter(classDeclOfActivity.simpleName.asString())}State"
+            funBuilder.beginControlFlow("if (stateHolder.$activityStateHolderFieldName != null) {")
+            activityToStateEntry.value.forEach { ksPropertyDeclaration ->
+                // need to find equivalent field in state holder for this activity
+                // need to check for null in stateholder prop
+                val typeSpecOfStateHolder = stateHoldersForActivities[activityToStateEntry.key]!!
+                val equivPropInStateHolder = typeSpecOfStateHolder.propertySpecs.first { it.name == ksPropertyDeclaration.simpleName.asString() }
+                if (equivPropInStateHolder.type.isNullable && !ksPropertyDeclaration.type.resolve().isMarkedNullable) {
+                    funBuilder.beginControlFlow("if (stateHolder.$activityStateHolderFieldName!!.${ksPropertyDeclaration.simpleName.asString()} != null) {")
+                    funBuilder.addStatement("activity.${ksPropertyDeclaration.simpleName.asString()} = stateHolder.$activityStateHolderFieldName!!.${ksPropertyDeclaration.simpleName.asString()}!!")
+                    funBuilder.endControlFlow()
+                }
+                else {
+                    funBuilder.addStatement("activity.${ksPropertyDeclaration.simpleName.asString()} = stateHolder.$activityStateHolderFieldName!!.${ksPropertyDeclaration.simpleName.asString()}")
+                }
+            }
+            funBuilder.endControlFlow() // close if
+            funBuilder.endControlFlow() // close is
+        }
+        funBuilder.endControlFlow() // close when
         return funBuilder.build()
     }
     private fun generateSaveStateConfigChange(

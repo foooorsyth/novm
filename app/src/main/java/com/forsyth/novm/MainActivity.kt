@@ -3,9 +3,8 @@ package com.forsyth.novm
 import android.content.Intent
 import android.os.Bundle
 import com.forsyth.novm.StateDestroyingEvent.CONFIGURATION_CHANGE
-import com.forsyth.novm.StateDestroyingEvent.PROCESS_DEATH
 
-class MainActivity : StateSavingActivity() {
+class MainActivity : ComponentActivity() {
 
     @State(retainAcross = CONFIGURATION_CHANGE)
     var isToggled = false

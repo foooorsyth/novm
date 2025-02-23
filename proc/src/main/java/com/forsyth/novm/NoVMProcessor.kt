@@ -22,7 +22,7 @@ import com.squareup.kotlinpoet.ksp.writeTo
 import java.util.Locale
 
 
-const val COMPONENT_ACTIVITY_QUALIFIED_NAME = "androidx.appcompat.app.AppCompatActivity"
+const val COMPONENT_ACTIVITY_QUALIFIED_NAME = "androidx.activity.ComponentActivity"
 
 class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : SymbolProcessor {
     override fun process(resolver: Resolver): List<KSAnnotated> {
@@ -73,17 +73,61 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
         val stateHoldersForActivities = generateStateHoldersForActivities(resolver, activityToStateMap)
         val topLevelStateHolder = generateTopLevelStateHolder(packageName, stateHoldersForActivities)
         val fileSpec = FileSpec.builder(packageName, fileName)
+            .addImport("android.os", "Bundle")
+            .addImport("androidx.annotation", "CallSuper")
+            .addImport("androidx.appcompat.app", "AppCompatActivity")
             .addTypes(stateHoldersForActivities)
             .addType(topLevelStateHolder)
+            /*
+            .addCode("\nopen class StateSavingActivity : AppCompatActivity() {\n" +
+                    "\n" +
+                    "    val stateSaver = StateSaver()\n" +
+                    "\n" +
+                    "    @CallSuper\n" +
+                    "    override fun onCreate(savedInstanceState: Bundle?) {\n" +
+                    "        super.onCreate(savedInstanceState)\n" +
+                    "\n" +
+                    "        // Restore config change proof state\n" +
+                    "        @Suppress(\"DEPRECATION\")\n" +
+                    "        (lastCustomNonConfigurationInstance as? StateHolder)?.let { retainedState ->\n" +
+                    "            stateSaver.restoreStateConfigChange(this, retainedState)\n" +
+                    "        }\n" +
+                    "\n" +
+                    "        // Restore process death proof state\n" +
+                    "        if (savedInstanceState != null) {\n" +
+                    "            stateSaver.restoreStateBundle(this, savedInstanceState)\n" +
+                    "        }\n" +
+                    "    }\n" +
+                    "\n" +
+                    "    @CallSuper\n" +
+                    "    override fun onSaveInstanceState(outState: Bundle) {\n" +
+                    "        stateSaver.saveStateBundle(this, outState)\n" +
+                    "        super.onSaveInstanceState(outState)\n" +
+                    "    }\n" +
+                    "\n" +
+                    "    @Suppress(\"OVERRIDE_DEPRECATION\")\n" +
+                    "    @CallSuper\n" +
+                    "    override fun onRetainCustomNonConfigurationInstance(): Any? {\n" +
+                    "        return stateSaver.saveStateConfigChange(this)\n" +
+                    "    }\n" +
+                    "}")
+             */
             .build()
         fileSpec.writeTo(codeGenerator, Dependencies(true, *activityContainingFiles.toTypedArray()))
+    }
+
+    private fun generateStateSaver(packageName: String) {
+
     }
 
     private fun generateTopLevelStateHolder(packageName: String, stateHoldersForActivities: List<TypeSpec>) : TypeSpec {
         val builder = TypeSpec.classBuilder("StateHolder")
         stateHoldersForActivities.forEach { typeSpec ->
             builder.addProperty(
-                PropertySpec.builder(typeSpec.name!!.replaceFirstChar { it.lowercase(Locale.getDefault()) }, ClassName(packageName, typeSpec.name!!).copy(nullable = true))
+                PropertySpec.builder(
+                    typeSpec.name!!.replaceFirstChar { it.lowercase(Locale.getDefault()) },
+                    ClassName(packageName, typeSpec.name!!).copy(nullable = true)
+                )
                     .mutable(true)
                     .initializer("%L", null)
                     .build()

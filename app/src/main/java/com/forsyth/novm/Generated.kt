@@ -11,13 +11,13 @@ class MainActivityState {
 class StateHolder {
     var mainActivityState: MainActivityState? = null
 }
+
  */
-// TODO then this
 class StateSaver {
     companion object {
         const val KEY_MAINACTIVITY_MYTEXT = "MainActivity_myText"
     }
-    fun saveStateMem(activity: StateSavingActivity) : StateHolder {
+    fun saveStateConfigChange(activity: ComponentActivity) : StateHolder {
         val stateHolder = StateHolder()
         when (activity) {
             is MainActivity -> {
@@ -30,7 +30,7 @@ class StateSaver {
         return stateHolder
     }
 
-    fun restoreStateMem(activity: StateSavingActivity, stateHolder: StateHolder) {
+    fun restoreStateConfigChange(activity: ComponentActivity, stateHolder: StateHolder) {
         when (activity) {
             is MainActivity -> {
                 if (stateHolder.mainActivityState != null) {
@@ -40,7 +40,7 @@ class StateSaver {
         }
     }
 
-    fun saveStateDisk(activity: StateSavingActivity, bundle: Bundle) {
+    fun saveStateBundle(activity: ComponentActivity, bundle: Bundle) {
         when (activity) {
             is MainActivity -> {
                 bundle.putString(KEY_MAINACTIVITY_MYTEXT, activity.myText)
@@ -48,7 +48,7 @@ class StateSaver {
         }
     }
 
-    fun restoreStateDisk(activity: StateSavingActivity, bundle: Bundle) {
+    fun restoreStateBundle(activity: ComponentActivity, bundle: Bundle) {
         when (activity) {
             is MainActivity -> {
                 activity.myText = bundle.getString(KEY_MAINACTIVITY_MYTEXT)
@@ -57,8 +57,7 @@ class StateSaver {
     }
 
 }
-
-open class StateSavingActivity : AppCompatActivity() {
+open class ComponentActivity : AppCompatActivity() {
 
     val stateSaver = StateSaver()
 
@@ -69,24 +68,24 @@ open class StateSavingActivity : AppCompatActivity() {
         // Restore config change proof state
         @Suppress("DEPRECATION")
         (lastCustomNonConfigurationInstance as? StateHolder)?.let { retainedState ->
-            stateSaver.restoreStateMem(this, retainedState)
+            stateSaver.restoreStateConfigChange(this, retainedState)
         }
 
         // Restore process death proof state
         if (savedInstanceState != null) {
-            stateSaver.restoreStateDisk(this, savedInstanceState)
+            stateSaver.restoreStateBundle(this, savedInstanceState)
         }
     }
 
     @CallSuper
     override fun onSaveInstanceState(outState: Bundle) {
-        stateSaver.saveStateDisk(this, outState)
+        stateSaver.saveStateBundle(this, outState)
         super.onSaveInstanceState(outState)
     }
 
     @Suppress("OVERRIDE_DEPRECATION")
     @CallSuper
     override fun onRetainCustomNonConfigurationInstance(): Any? {
-        return stateSaver.saveStateMem(this)
+        return stateSaver.saveStateConfigChange(this)
     }
 }

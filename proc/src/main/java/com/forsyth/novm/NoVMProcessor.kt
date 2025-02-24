@@ -131,7 +131,17 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                                    topLevelStateHolder: TypeSpec,
                                    stateHoldersForActivities: MutableMap<String, TypeSpec>,
                                    ) : TypeSpec {
-        val builder = TypeSpec.classBuilder("StateSaver")
+/*
+        val ssbRet = generateSaveStateBundle(
+                    packageName,
+                    resolver,
+                    activityToStateMap,
+                    topLevelStateHolder,
+                    stateHoldersForActivities
+                )
+
+ */
+        val builder = TypeSpec.classBuilder("StateSaver") //dangerous, collisions
             .addFunction(
                 generateSaveStateConfigChange(
                     packageName,
@@ -150,9 +160,76 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                     stateHoldersForActivities
                 )
             )
+            /*
+            .addFunction(
+                ssbRet.funSpec
+            )*/
         return builder.build()
     }
 
+    // TODO companion object const for each piece of state
+    data class SSBRet(
+        val funSpec: FunSpec,
+        val keyNames: List<String>,
+        val keyValues: List<String>
+    )
+
+    private fun generateSaveStateBundle(
+        packageName: String,
+        resolver: Resolver,
+        activityToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>>,
+        topLevelStateHolder: TypeSpec,
+        stateHoldersForActivities: MutableMap<String, TypeSpec>) : SSBRet {
+        val keyNames = mutableListOf<String>()
+        val keyValues = mutableListOf<String>()
+        val funBuilder = FunSpec.builder("saveStateBundle")
+            .addParameter(
+                ParameterSpec.builder(
+                    "activity",
+                    ClassName("androidx.activity", "ComponentActivity")
+                )
+                    .build()
+            )
+            .addParameter(
+                ParameterSpec.builder(
+                    "bundle",
+                    ClassName("android.os", "Bundle")
+                )
+                    .build()
+            )
+            .beginControlFlow("when (activity) {")
+        activityToStateMap.forEach { activityToStateEntry ->
+            val classDeclOfActivity = resolver.getClassDeclarationByName(activityToStateEntry.key)!!
+            funBuilder.beginControlFlow("is ${activityToStateEntry.key} -> {")
+            val activityStateHolderFieldName = "${lowercaseFirstLetter(classDeclOfActivity.simpleName.asString())}State"
+            funBuilder.beginControlFlow("if (stateHolder.$activityStateHolderFieldName != null) {")
+            activityToStateEntry.value.forEach { ksPropertyDeclaration ->
+                // need to find equivalent field in state holder for this activity
+                // need to check for null in stateholder prop
+                val typeSpecOfStateHolder = stateHoldersForActivities[activityToStateEntry.key]!!
+                val equivPropInStateHolder = typeSpecOfStateHolder.propertySpecs.first { it.name == ksPropertyDeclaration.simpleName.asString() }
+                if (equivPropInStateHolder.type.isNullable && !ksPropertyDeclaration.type.resolve().isMarkedNullable) {
+                    funBuilder.beginControlFlow("if (stateHolder.$activityStateHolderFieldName!!.${ksPropertyDeclaration.simpleName.asString()} != null) {")
+                    funBuilder.addStatement("activity.${ksPropertyDeclaration.simpleName.asString()} = stateHolder.$activityStateHolderFieldName!!.${ksPropertyDeclaration.simpleName.asString()}!!")
+                    funBuilder.endControlFlow()
+                }
+                else {
+                    funBuilder.addStatement("activity.${ksPropertyDeclaration.simpleName.asString()} = stateHolder.$activityStateHolderFieldName!!.${ksPropertyDeclaration.simpleName.asString()}")
+                }
+            }
+            funBuilder.endControlFlow() // close if
+            funBuilder.endControlFlow() // close is
+        }
+        funBuilder.endControlFlow() // close when
+
+        return SSBRet(
+            funSpec = funBuilder.build(),
+            keyNames = keyNames,
+            keyValues = keyValues
+        )
+    }
+
+    @OptIn(KspExperimental::class)
     private fun generateRestoreStateConfigChange(
         packageName: String,
         resolver: Resolver,
@@ -184,7 +261,10 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
             funBuilder.beginControlFlow("is ${activityToStateEntry.key} -> {")
             val activityStateHolderFieldName = "${lowercaseFirstLetter(classDeclOfActivity.simpleName.asString())}State"
             funBuilder.beginControlFlow("if (stateHolder.$activityStateHolderFieldName != null) {")
-            activityToStateEntry.value.forEach { ksPropertyDeclaration ->
+            activityToStateEntry.value.filter { ksPropertyDeclaration ->
+               ksPropertyDeclaration.getAnnotationsByType(State::class).toList().first().retainAcross == StateDestroyingEvent.CONFIGURATION_CHANGE
+            }
+            .forEach { ksPropertyDeclaration ->
                 // need to find equivalent field in state holder for this activity
                 // need to check for null in stateholder prop
                 val typeSpecOfStateHolder = stateHoldersForActivities[activityToStateEntry.key]!!
@@ -204,6 +284,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
         funBuilder.endControlFlow() // close when
         return funBuilder.build()
     }
+    @OptIn(KspExperimental::class)
     private fun generateSaveStateConfigChange(
         packageName: String,
            resolver: Resolver,
@@ -232,8 +313,10 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
             funBuilder.addStatement(
                 "stateHolder.$activityStateHolderFieldName = ${classDeclOfActivity.simpleName.asString()}State()"
             )
-            entry.value.forEach { propertyDecl ->
-                val resolveTypeOfProp = propertyDecl.type.resolve()
+            entry.value.filter { ksPropertyDeclaration ->
+                ksPropertyDeclaration.getAnnotationsByType(State::class).toList().first().retainAcross == StateDestroyingEvent.CONFIGURATION_CHANGE
+            }
+            .forEach { propertyDecl ->
                 // during save, nullability doesn't matter
                 funBuilder.addStatement(
                     "stateHolder.$activityStateHolderFieldName!!.${propertyDecl.simpleName.asString()} = activity.${propertyDecl.simpleName.asString()}"

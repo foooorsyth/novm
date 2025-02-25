@@ -196,10 +196,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
             )
             .beginControlFlow("when (activity) {")
         activityToStateMap.forEach { activityToStateEntry ->
-            val classDeclOfActivity = resolver.getClassDeclarationByName(activityToStateEntry.key)!!
             funBuilder.beginControlFlow("is ${activityToStateEntry.key} -> {")
-            val activityStateHolderFieldName = "${lowercaseFirstLetter(classDeclOfActivity.simpleName.asString())}State"
-            funBuilder.beginControlFlow("if (stateHolder.$activityStateHolderFieldName != null) {")
             activityToStateEntry.value
                 .filter { ksPropertyDeclaration ->
                     ksPropertyDeclaration.getAnnotationsByType(State::class).toList().first().retainAcross == StateDestroyingEvent.PROCESS_DEATH
@@ -210,7 +207,6 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                     // TODO these supported types should be checked earlier
                     // TODO before codegen starts
             }
-            funBuilder.endControlFlow() // close if
             funBuilder.endControlFlow() // close is
         }
         funBuilder.endControlFlow() // close when

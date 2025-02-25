@@ -209,8 +209,6 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                     // TODO need a map of supported types of bundle
                     // TODO these supported types should be checked earlier
                     // TODO before codegen starts
-
-
             }
             funBuilder.endControlFlow() // close if
             funBuilder.endControlFlow() // close is
@@ -223,6 +221,8 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
             keyValues = keyValues
         )
     }
+
+
 
     @OptIn(KspExperimental::class)
     private fun generateRestoreStateConfigChange(
@@ -403,48 +403,5 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
             ret[entry.key] =  typeSpecBuilder.build()
         }
         return ret
-    }
-
-    private fun isBuiltInWithDefaultValue(resolver: Resolver, ksType: KSType) : Boolean {
-        return when (ksType) {
-            resolver.builtIns.booleanType,
-            resolver.builtIns.stringType,
-            resolver.builtIns.intType,
-            resolver.builtIns.longType,
-            resolver.builtIns.floatType,
-            resolver.builtIns.doubleType,
-            resolver.builtIns.byteType,
-            resolver.builtIns.shortType,
-            resolver.builtIns.charType,
-            resolver.builtIns.numberType -> {
-                true
-            }
-            else -> {
-                false
-            }
-        }
-    }
-
-    private fun isSubclassOf(clazz: KSClassDeclaration, qualifiedNameOfSuper: String) : Boolean {
-        val superTypeClassDecls = clazz.superTypes.toList()
-            .mapNotNull { ksTypeReference ->  ksTypeReference.resolve().declaration as? KSClassDeclaration }
-        if (superTypeClassDecls.isEmpty()) {
-            return false
-        }
-        if (superTypeClassDecls.any { ksClassDeclaration -> ksClassDeclaration.qualifiedName?.asString() == qualifiedNameOfSuper}) {
-            return true
-        }
-        // recursively try supertypes
-        return superTypeClassDecls
-            .map { classDecl -> isSubclassOf(classDecl, qualifiedNameOfSuper) }
-            .reduce { acc, b -> acc || b }
-    }
-
-    override fun finish() {
-        logger.info("novm finished")
-    }
-
-    override fun onError() {
-        logger.info("novm onError")
     }
 }

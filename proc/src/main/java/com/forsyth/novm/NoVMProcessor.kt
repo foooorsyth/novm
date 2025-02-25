@@ -16,6 +16,7 @@ import com.google.devtools.ksp.symbol.KSType
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
+import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.TypeSpec
@@ -80,6 +81,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
             topLevelStateHolder,
             stateHoldersForActivities
             )
+
         val fileSpec = FileSpec.builder(packageName, fileName)
             .addImport("android.os", "Bundle")
             .addImport("androidx.annotation", "CallSuper")
@@ -87,40 +89,6 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
             .addTypes(stateHoldersForActivities.values)
             .addType(topLevelStateHolder)
             .addType(stateSaver)
-            /*
-            .addCode("\nopen class StateSavingActivity : AppCompatActivity() {\n" +
-                    "\n" +
-                    "    val stateSaver = StateSaver()\n" +
-                    "\n" +
-                    "    @CallSuper\n" +
-                    "    override fun onCreate(savedInstanceState: Bundle?) {\n" +
-                    "        super.onCreate(savedInstanceState)\n" +
-                    "\n" +
-                    "        // Restore config change proof state\n" +
-                    "        @Suppress(\"DEPRECATION\")\n" +
-                    "        (lastCustomNonConfigurationInstance as? StateHolder)?.let { retainedState ->\n" +
-                    "            stateSaver.restoreStateConfigChange(this, retainedState)\n" +
-                    "        }\n" +
-                    "\n" +
-                    "        // Restore process death proof state\n" +
-                    "        if (savedInstanceState != null) {\n" +
-                    "            stateSaver.restoreStateBundle(this, savedInstanceState)\n" +
-                    "        }\n" +
-                    "    }\n" +
-                    "\n" +
-                    "    @CallSuper\n" +
-                    "    override fun onSaveInstanceState(outState: Bundle) {\n" +
-                    "        stateSaver.saveStateBundle(this, outState)\n" +
-                    "        super.onSaveInstanceState(outState)\n" +
-                    "    }\n" +
-                    "\n" +
-                    "    @Suppress(\"OVERRIDE_DEPRECATION\")\n" +
-                    "    @CallSuper\n" +
-                    "    override fun onRetainCustomNonConfigurationInstance(): Any? {\n" +
-                    "        return stateSaver.saveStateConfigChange(this)\n" +
-                    "    }\n" +
-                    "}")
-             */
             .build()
         fileSpec.writeTo(codeGenerator, Dependencies(true, *activityContainingFiles.toTypedArray()))
     }
@@ -160,14 +128,26 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
             .addFunction(
                 ssbRet.funSpec
             )
+        val companionObjectBuilder = TypeSpec.companionObjectBuilder()
+        ssbRet.bundleKeyValuePairs.forEach { entry ->
+            companionObjectBuilder.addProperty(
+                PropertySpec.builder(entry.key, ClassName("kotlin", "String"))
+                    .addModifiers(KModifier.CONST)
+                    .mutable(false)
+                    .initializer("\"%L\"", entry.value)
+                    .build()
+            )
+        }
+        builder.addType(
+            companionObjectBuilder.build()
+        )
         return builder.build()
     }
 
     // TODO companion object const for each piece of state
     data class SSBRet(
         val funSpec: FunSpec,
-        val keyNames: List<String>,
-        val keyValues: List<String>
+        val bundleKeyValuePairs: Map<String, String>
     )
 
     @OptIn(KspExperimental::class)
@@ -179,6 +159,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
         stateHoldersForActivities: MutableMap<String, TypeSpec>) : SSBRet {
         val keyNames = mutableListOf<String>()
         val keyValues = mutableListOf<String>()
+        val bundleKeyValuePairs = mutableMapOf<String, String>()
         val funBuilder = FunSpec.builder("saveStateBundle")
             .addParameter(
                 ParameterSpec.builder(
@@ -201,11 +182,18 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                 .filter { ksPropertyDeclaration ->
                     ksPropertyDeclaration.getAnnotationsByType(State::class).toList().first().retainAcross == StateDestroyingEvent.PROCESS_DEATH
                 }
-                .forEach { ksPropertyDeclaration ->
-                    // TODO get type of decl
-                    // TODO need a map of supported types of bundle
-                    // TODO these supported types should be checked earlier
-                    // TODO before codegen starts
+                .forEach filteredForEach@ { ksPropertyDeclaration ->
+                    val bundleFunPostfix = getBundleFunPostfix(resolver, ksPropertyDeclaration)
+                    if (bundleFunPostfix == null) {
+                        logger.error("State ${ksPropertyDeclaration.simpleName.asString()} is marked to be retained across PROCESS_DEATH but is not a type supported by Bundle")
+                        return@filteredForEach
+                    }
+                    // TODO check bundlefunpostfix BEFORE codegen starts
+                    val value = "${ksPropertyDeclaration.parentDeclaration!!.simpleName.asString()}_${ksPropertyDeclaration.simpleName.asString()}"
+                    val key = "KEY_${value.uppercase()}"
+                    bundleKeyValuePairs[key] = value
+                    funBuilder.addStatement("bundle.put$bundleFunPostfix($key, activity.${ksPropertyDeclaration.simpleName.asString()})")
+
             }
             funBuilder.endControlFlow() // close is
         }
@@ -213,12 +201,9 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
 
         return SSBRet(
             funSpec = funBuilder.build(),
-            keyNames = keyNames,
-            keyValues = keyValues
+            bundleKeyValuePairs = bundleKeyValuePairs
         )
     }
-
-
 
     @OptIn(KspExperimental::class)
     private fun generateRestoreStateConfigChange(

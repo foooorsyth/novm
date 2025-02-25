@@ -13,11 +13,11 @@ class MainActivity : StateSavingActivity() {
     @State(retainAcross = CONFIGURATION_CHANGE)
     var someNullableDouble: Double? = null
 
-    @State(retainAcross = CONFIGURATION_CHANGE)
+    @State(retainAcross = PROCESS_DEATH)
     var myText: String? = null
 
     @State(retainAcross = PROCESS_DEATH)
-    var myIntent: Intent = Intent()
+    var intArray: IntArray = intArrayOf(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

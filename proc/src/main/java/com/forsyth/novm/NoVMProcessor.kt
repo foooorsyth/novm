@@ -12,7 +12,6 @@ import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
-import com.google.devtools.ksp.symbol.KSType
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
@@ -103,8 +102,6 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                     packageName,
                     resolver,
                     activityToStateMap,
-                    topLevelStateHolder,
-                    stateHoldersForActivities
                 )
         val builder = TypeSpec.classBuilder("StateSaver") //dangerous, collisions
             .addFunction(
@@ -127,6 +124,13 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
             )
             .addFunction(
                 ssbRet.funSpec
+            )
+            .addFunction(
+                generateRestoreStateBundle(
+                    packageName,
+                    resolver,
+                    activityToStateMap,
+                )
             )
         val companionObjectBuilder = TypeSpec.companionObjectBuilder()
         ssbRet.bundleKeyValuePairs.forEach { entry ->
@@ -154,11 +158,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
     private fun generateSaveStateBundle(
         packageName: String,
         resolver: Resolver,
-        activityToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>>,
-        topLevelStateHolder: TypeSpec,
-        stateHoldersForActivities: MutableMap<String, TypeSpec>) : SSBRet {
-        val keyNames = mutableListOf<String>()
-        val keyValues = mutableListOf<String>()
+        activityToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>>): SSBRet {
         val bundleKeyValuePairs = mutableMapOf<String, String>()
         val funBuilder = FunSpec.builder("saveStateBundle")
             .addParameter(
@@ -189,11 +189,9 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                         return@filteredForEach
                     }
                     // TODO check bundlefunpostfix BEFORE codegen starts
-                    val value = "${ksPropertyDeclaration.parentDeclaration!!.simpleName.asString()}_${ksPropertyDeclaration.simpleName.asString()}"
-                    val key = "KEY_${value.uppercase()}"
-                    bundleKeyValuePairs[key] = value
-                    funBuilder.addStatement("bundle.put$bundleFunPostfix($key, activity.${ksPropertyDeclaration.simpleName.asString()})")
-
+                    val kvp = generateBundleKeyValuePair(ksPropertyDeclaration)
+                    bundleKeyValuePairs[kvp.first] = kvp.second
+                    funBuilder.addStatement("bundle.put$bundleFunPostfix(${kvp.first}, activity.${ksPropertyDeclaration.simpleName.asString()})")
             }
             funBuilder.endControlFlow() // close is
         }
@@ -203,6 +201,56 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
             funSpec = funBuilder.build(),
             bundleKeyValuePairs = bundleKeyValuePairs
         )
+    }
+
+    @OptIn(KspExperimental::class)
+    private fun generateRestoreStateBundle(
+        packageName: String,
+        resolver: Resolver,
+        activityToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>>
+        ): FunSpec {
+        val funBuilder = FunSpec.builder("restoreStateBundle")
+            .addParameter(
+                ParameterSpec.builder(
+                    "activity",
+                    ClassName("androidx.activity", "ComponentActivity")
+                )
+                    .build()
+            )
+            .addParameter(
+                ParameterSpec.builder(
+                    "bundle",
+                    ClassName("android.os", "Bundle")
+                )
+                    .build()
+            )
+            .beginControlFlow("when (activity) {")
+        activityToStateMap.forEach { activityToStateEntry ->
+            funBuilder.beginControlFlow("is ${activityToStateEntry.key} -> {")
+            activityToStateEntry.value
+                .filter { ksPropertyDeclaration ->
+                    ksPropertyDeclaration.getAnnotationsByType(State::class).toList().first().retainAcross == StateDestroyingEvent.PROCESS_DEATH
+                }
+                .forEach filteredForEach@ { ksPropertyDeclaration ->
+                    val bundleFunPostfix = getBundleFunPostfix(resolver, ksPropertyDeclaration)
+                    if (bundleFunPostfix == null) {
+                        logger.error("State ${ksPropertyDeclaration.simpleName.asString()} is marked to be retained across PROCESS_DEATH but is not a type supported by Bundle")
+                        return@filteredForEach
+                    }
+                    // TODO check bundlefunpostfix BEFORE codegen starts
+                    val key = generateBundleKeyValuePair(ksPropertyDeclaration).first
+                    funBuilder.addStatement("bundle.get$bundleFunPostfix($key)")
+                }
+            funBuilder.endControlFlow() // close is
+        }
+        funBuilder.endControlFlow() // close when
+        return funBuilder.build()
+    }
+
+    private fun generateBundleKeyValuePair(ksPropertyDeclaration: KSPropertyDeclaration) : Pair<String, String> {
+        val value = "${ksPropertyDeclaration.parentDeclaration!!.simpleName.asString()}_${ksPropertyDeclaration.simpleName.asString()}"
+        val key = "KEY_${value.uppercase()}"
+        return key to value
     }
 
     @OptIn(KspExperimental::class)

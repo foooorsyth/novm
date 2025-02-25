@@ -20,6 +20,6 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "NoVM"
-include(":app")
+include(":sample")
 include(":proc")
 include(":lib")

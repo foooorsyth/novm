@@ -19,6 +19,9 @@ class MainActivity : StateSavingActivity() {
     @State(retainAcross = PROCESS_DEATH)
     var intArray: IntArray = intArrayOf(0)
 
+    @State(retainAcross = PROCESS_DEATH)
+    var primTest: Int = 4
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)

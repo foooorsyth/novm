@@ -3,6 +3,12 @@ package com.forsyth.novm
 import android.os.Bundle
 import androidx.annotation.CallSuper
 import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
+import androidx.fragment.app.FragmentOnAttachListener
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 
 /*
 class MainActivityState {
@@ -62,10 +68,27 @@ class StateSaver {
 open class StateSavingActivity : AppCompatActivity() {
 
     val stateSaver = StateSaver()
+    val fragmentMemory = mutableSetOf<Fragment>()
+    val fragmentLifecycleObserver = object: DefaultLifecycleObserver {
+        override fun onCreate(owner: LifecycleOwner) {
+            val fragment = owner as Fragment
+            fragment.id
+            fragmentMemory.add(owner as Fragment)
+        }
+
+        override fun onDestroy(owner: LifecycleOwner) {
+            fragmentMemory.remove(owner as Fragment)
+        }
+    }
+    val fragmentListener = FragmentOnAttachListener { fragmentManager, fragment ->
+        fragment.lifecycle.addObserver(fragmentLifecycleObserver)
+    }
 
     @CallSuper
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        supportFragmentManager.addFragmentOnAttachListener(fragmentListener)
 
         // Restore config change proof state
         @Suppress("DEPRECATION")

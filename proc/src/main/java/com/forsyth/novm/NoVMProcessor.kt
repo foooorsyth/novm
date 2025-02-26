@@ -81,7 +81,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
             stateHoldersForActivities
             )
 
-        val fileSpec = FileSpec.builder(packageName, fileName)
+        FileSpec.builder(packageName, fileName)
             .addImport("android.os", "Bundle")
             .addImport("androidx.annotation", "CallSuper")
             .addImport("androidx.appcompat.app", "AppCompatActivity")
@@ -89,7 +89,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
             .addType(topLevelStateHolder)
             .addType(stateSaver)
             .build()
-        fileSpec.writeTo(codeGenerator, Dependencies(true, *activityContainingFiles.toTypedArray()))
+            .writeTo(codeGenerator, Dependencies(true, *activityContainingFiles.toTypedArray()))
     }
 
     private fun generateStateSaver(packageName: String,
@@ -148,7 +148,6 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
         return builder.build()
     }
 
-    // TODO companion object const for each piece of state
     data class SSBRet(
         val funSpec: FunSpec,
         val bundleKeyValuePairs: Map<String, String>
@@ -232,14 +231,29 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                     ksPropertyDeclaration.getAnnotationsByType(State::class).toList().first().retainAcross == StateDestroyingEvent.PROCESS_DEATH
                 }
                 .forEach filteredForEach@ { ksPropertyDeclaration ->
-                    val bundleFunPostfix = getBundleFunPostfix(resolver, ksPropertyDeclaration)
-                    if (bundleFunPostfix == null) {
-                        logger.error("State ${ksPropertyDeclaration.simpleName.asString()} is marked to be retained across PROCESS_DEATH but is not a type supported by Bundle")
+                    val resolvedType = ksPropertyDeclaration.type.resolve()
+                    val key = generateBundleKeyValuePair(ksPropertyDeclaration).first
+                    val primPostfix = getBundleFunPostfixForPrimitive(resolver, resolvedType)
+                    if (primPostfix != null) {
+                        // primitives always have default value
+                        funBuilder.addStatement("activity.${ksPropertyDeclaration.simpleName.asString()} = bundle.get$primPostfix($key)")
                         return@filteredForEach
                     }
-                    // TODO check bundlefunpostfix BEFORE codegen starts
-                    val key = generateBundleKeyValuePair(ksPropertyDeclaration).first
-                    funBuilder.addStatement("bundle.get$bundleFunPostfix($key)")
+                    // next check arrays and ArrayList<out String!>
+                    // TODO handle ArrayList<out String!>
+                    val nonPrimPostfix = getBundleFunPostfixForNonPrimitive(resolver, resolvedType)
+                    if (nonPrimPostfix != null) {
+                        // non-prims can be null, need to be careful if state is non-null
+                        if (resolvedType.isMarkedNullable) {
+                            funBuilder.addStatement("activity.${ksPropertyDeclaration.simpleName.asString()} = bundle.get$nonPrimPostfix($key)")
+                        } else {
+                            funBuilder.addStatement("bundle.get$nonPrimPostfix($key)?.let { activity.${ksPropertyDeclaration.simpleName.asString()} = it }")
+                        }
+                        return@filteredForEach
+                    }
+                    // TODO handle serializable, parcelable, bundle etc
+                    logger.error("State ${ksPropertyDeclaration.simpleName.asString()} is marked to be retained across PROCESS_DEATH but is not a type supported by Bundle")
+                    return@filteredForEach
                 }
             funBuilder.endControlFlow() // close is
         }

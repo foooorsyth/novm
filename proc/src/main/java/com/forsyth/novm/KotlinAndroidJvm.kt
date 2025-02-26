@@ -67,11 +67,9 @@ fun getBundleFunPostfixForNonPrimitive(resolver: Resolver, ksType: KSType) : Str
     return BUNDLE_SUPPORTED_NULLABLE_TYPES[mutatedType.declaration.qualifiedName!!.asString()]
 }
 
-@Suppress("PrivateApi")
-fun getBundleFunPostfix(resolver: Resolver, ksPropertyDeclaration: KSPropertyDeclaration) : String? {
-    val ksType = ksPropertyDeclaration.type.resolve()
-    // first check primitives
+fun getBundleFunPostfix(resolver: Resolver, ksType: KSType) : String? {
     val primStr = getBundleFunPostfixForPrimitive(resolver, ksType)
+    // first check primitives
     if (primStr != null) {
         return primStr
     }
@@ -83,6 +81,10 @@ fun getBundleFunPostfix(resolver: Resolver, ksPropertyDeclaration: KSPropertyDec
     }
     // TODO handle Serializable, Parcelable, Bundle, etc
     return null
+}
+
+fun getBundleFunPostfix(resolver: Resolver, ksPropertyDeclaration: KSPropertyDeclaration) : String? {
+    return getBundleFunPostfix(resolver, ksPropertyDeclaration.type.resolve())
 }
 
 fun isBuiltInWithDefaultValue(resolver: Resolver, ksType: KSType) : Boolean {

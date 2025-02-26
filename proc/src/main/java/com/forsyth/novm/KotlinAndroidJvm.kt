@@ -57,7 +57,9 @@ val BUNDLE_SUPPORTED_NULLABLE_TYPES = mapOf(
     "kotlin.FloatArray" to "FloatArray",
     "kotlin.DoubleArray" to "DoubleArray",
     "kotlin.BooleanArray" to "BooleanArray",
-    "kotlin.Array<kotlin.String>" to "StringArray"
+    "kotlin.Array<kotlin.String>" to "StringArray",
+    "kotlin.collections.ArrayList<kotlin.Int>" to "IntegerArrayList",
+    "kotlin.collections.ArrayList<kotlin.String>" to "StringArrayList",
 )
 
 fun getBundleFunPostfixForNonPrimitive(resolver: Resolver, ksType: KSType) : String? {
@@ -76,8 +78,7 @@ fun getBundleFunPostfix(resolver: Resolver, ksType: KSType) : String? {
     if (primStr != null) {
         return primStr
     }
-    // next check arrays and ArrayList<out String!>
-    // TODO handle Array<(out) String!>?
+    // TODO support ArrayList<out String!>
     val nonPrimStr = getBundleFunPostfixForNonPrimitive(resolver, ksType)
     if (nonPrimStr != null) {
         return nonPrimStr

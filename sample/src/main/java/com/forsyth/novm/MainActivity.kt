@@ -25,6 +25,9 @@ class MainActivity : StateSavingActivity() {
     @State(retainAcross = PROCESS_DEATH)
     var stringArraytest: Array<String>? = null
 
+    @State(retainAcross = PROCESS_DEATH)
+    var intArrayListTest: ArrayList<Int>? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)

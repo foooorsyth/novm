@@ -4,6 +4,7 @@ import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import com.google.devtools.ksp.symbol.KSType
+import com.squareup.kotlinpoet.ksp.toTypeName
 
 
 /**
@@ -56,6 +57,7 @@ val BUNDLE_SUPPORTED_NULLABLE_TYPES = mapOf(
     "kotlin.FloatArray" to "FloatArray",
     "kotlin.DoubleArray" to "DoubleArray",
     "kotlin.BooleanArray" to "BooleanArray",
+    "kotlin.Array<kotlin.String>" to "StringArray"
 )
 
 fun getBundleFunPostfixForNonPrimitive(resolver: Resolver, ksType: KSType) : String? {
@@ -64,7 +66,8 @@ fun getBundleFunPostfixForNonPrimitive(resolver: Resolver, ksType: KSType) : Str
     } else {
         ksType
     }
-    return BUNDLE_SUPPORTED_NULLABLE_TYPES[mutatedType.declaration.qualifiedName!!.asString()]
+    //return BUNDLE_SUPPORTED_NULLABLE_TYPES[mutatedType.declaration.qualifiedName!!.asString()]
+    return BUNDLE_SUPPORTED_NULLABLE_TYPES[mutatedType.toTypeName().toString()]
 }
 
 fun getBundleFunPostfix(resolver: Resolver, ksType: KSType) : String? {
@@ -74,7 +77,7 @@ fun getBundleFunPostfix(resolver: Resolver, ksType: KSType) : String? {
         return primStr
     }
     // next check arrays and ArrayList<out String!>
-    // TODO handle ArrayList<out String!>
+    // TODO handle Array<(out) String!>?
     val nonPrimStr = getBundleFunPostfixForNonPrimitive(resolver, ksType)
     if (nonPrimStr != null) {
         return nonPrimStr

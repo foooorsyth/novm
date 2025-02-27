@@ -60,6 +60,8 @@ val BUNDLE_SUPPORTED_NULLABLE_TYPES = mapOf(
     "kotlin.Array<kotlin.String>" to "StringArray",
     "kotlin.collections.ArrayList<kotlin.Int>" to "IntegerArrayList",
     "kotlin.collections.ArrayList<kotlin.String>" to "StringArrayList",
+    "android.os.Bundle" to "Bundle"
+    // TODO CharSequence
 )
 
 fun getBundleFunPostfixForNonPrimitive(resolver: Resolver, ksType: KSType) : String? {
@@ -68,26 +70,69 @@ fun getBundleFunPostfixForNonPrimitive(resolver: Resolver, ksType: KSType) : Str
     } else {
         ksType
     }
-    //return BUNDLE_SUPPORTED_NULLABLE_TYPES[mutatedType.declaration.qualifiedName!!.asString()]
     return BUNDLE_SUPPORTED_NULLABLE_TYPES[mutatedType.toTypeName().toString()]
 }
 
-fun getBundleFunPostfix(resolver: Resolver, ksType: KSType) : String? {
+enum class BundleFunPostfixCategory {
+    NOT_APPLICABLE,
+    NON_NULL_PRIMITIVE,
+    NULLABLE_KNOWN_TYPE,
+    SUBCLASS_SERIALIZABLE_OR_PARCELABLE
+}
+
+data class BundleFunPostfixRet(
+    val postfix: String? = null,
+    val category: BundleFunPostfixCategory
+)
+fun getBundleFunPostfix(resolver: Resolver, ksType: KSType) : BundleFunPostfixRet {
+    // eg. primitive, nullable non primitive, or subclass of serializable / parcel
+    // also maybe return the nullability of the type
     val primStr = getBundleFunPostfixForPrimitive(resolver, ksType)
     // first check primitives
     if (primStr != null) {
-        return primStr
+        return BundleFunPostfixRet(
+            primStr,
+            BundleFunPostfixCategory.NON_NULL_PRIMITIVE
+        )
     }
-    // TODO support ArrayList<out String!>
     val nonPrimStr = getBundleFunPostfixForNonPrimitive(resolver, ksType)
     if (nonPrimStr != null) {
-        return nonPrimStr
+        return BundleFunPostfixRet(
+            nonPrimStr,
+            BundleFunPostfixCategory.NULLABLE_KNOWN_TYPE
+        )
     }
-    // TODO handle Serializable, Parcelable, Bundle, etc
-    return null
+
+    val classDecl = try {
+        ksType.declaration as KSClassDeclaration
+    } catch (ex: Exception) {
+        return BundleFunPostfixRet(
+            null,
+            BundleFunPostfixCategory.NOT_APPLICABLE
+        )
+    }
+    if (isSubclassOf(classDecl, "java.io.Serializable")) {
+        return BundleFunPostfixRet(
+            "Serializable",
+            BundleFunPostfixCategory.SUBCLASS_SERIALIZABLE_OR_PARCELABLE
+        )
+    }
+    // NOTE: Bundle and Persistable Bundle are Parcelable so they must be handled before we reach here
+    // we won't support PersistableBundle (via putALL) because there's no corollary get function
+    // we will only support putBundle/getBundle
+    if (isSubclassOf(classDecl, "android.os.Parcelable")) {
+        return BundleFunPostfixRet(
+            "Parcelable",
+            BundleFunPostfixCategory.SUBCLASS_SERIALIZABLE_OR_PARCELABLE
+        )
+    }
+    return BundleFunPostfixRet(
+        null,
+        BundleFunPostfixCategory.NOT_APPLICABLE
+    )
 }
 
-fun getBundleFunPostfix(resolver: Resolver, ksPropertyDeclaration: KSPropertyDeclaration) : String? {
+fun getBundleFunPostfix(resolver: Resolver, ksPropertyDeclaration: KSPropertyDeclaration) : BundleFunPostfixRet {
     return getBundleFunPostfix(resolver, ksPropertyDeclaration.type.resolve())
 }
 
@@ -111,8 +156,8 @@ fun isBuiltInWithDefaultValue(resolver: Resolver, ksType: KSType) : Boolean {
     }
 }
 
-fun isSubclassOf(clazz: KSClassDeclaration, qualifiedNameOfSuper: String) : Boolean {
-    val superTypeClassDecls = clazz.superTypes.toList()
+fun isSubclassOf(classDecl: KSClassDeclaration, qualifiedNameOfSuper: String) : Boolean {
+    val superTypeClassDecls = classDecl.superTypes.toList()
         .mapNotNull { ksTypeReference ->  ksTypeReference.resolve().declaration as? KSClassDeclaration }
     if (superTypeClassDecls.isEmpty()) {
         return false
@@ -122,6 +167,6 @@ fun isSubclassOf(clazz: KSClassDeclaration, qualifiedNameOfSuper: String) : Bool
     }
     // recursively try supertypes
     return superTypeClassDecls
-        .map { classDecl -> isSubclassOf(classDecl, qualifiedNameOfSuper) }
+        .map { classDeclInterior -> isSubclassOf(classDeclInterior, qualifiedNameOfSuper) }
         .reduce { acc, b -> acc || b }
 }

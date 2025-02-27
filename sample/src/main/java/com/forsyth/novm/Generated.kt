@@ -4,10 +4,8 @@ import android.os.Bundle
 import androidx.annotation.CallSuper
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentOnAttachListener
 import androidx.lifecycle.DefaultLifecycleObserver
-import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 
 /*
@@ -71,8 +69,6 @@ open class StateSavingActivity : AppCompatActivity() {
     val fragmentMemory = mutableSetOf<Fragment>()
     val fragmentLifecycleObserver = object: DefaultLifecycleObserver {
         override fun onCreate(owner: LifecycleOwner) {
-            val fragment = owner as Fragment
-            fragment.id
             fragmentMemory.add(owner as Fragment)
         }
 

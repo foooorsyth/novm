@@ -4,6 +4,12 @@ package com.forsyth.novm
 import android.os.Bundle
 import com.forsyth.novm.StateDestroyingEvent.CONFIGURATION_CHANGE
 import com.forsyth.novm.StateDestroyingEvent.PROCESS_DEATH
+import java.io.Serializable
+
+data class SerializableData(
+    val str: String,
+    val myInt: Int
+): Serializable
 
 class MainActivity : StateSavingActivity() {
 
@@ -27,6 +33,13 @@ class MainActivity : StateSavingActivity() {
 
     @State(retainAcross = PROCESS_DEATH)
     var intArrayListTest: ArrayList<Int>? = null
+
+    @State(retainAcross = PROCESS_DEATH)
+    var bundle: Bundle? = null
+
+    @State(retainAcross = PROCESS_DEATH)
+    var serializable: SerializableData = SerializableData("foo", 5)
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

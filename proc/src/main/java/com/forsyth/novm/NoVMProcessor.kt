@@ -183,15 +183,15 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                     ksPropertyDeclaration.getAnnotationsByType(State::class).toList().first().retainAcross == StateDestroyingEvent.PROCESS_DEATH
                 }
                 .forEach filteredForEach@ { ksPropertyDeclaration ->
-                    val bundleFunPostfix = getBundleFunPostfix(resolver, ksPropertyDeclaration)
-                    if (bundleFunPostfix == null) {
+                    val bundleFunPostfixRet = getBundleFunPostfix(resolver, ksPropertyDeclaration)
+                    if (bundleFunPostfixRet.postfix == null) {
                         logger.error("State ${ksPropertyDeclaration.simpleName.asString()} is marked to be retained across PROCESS_DEATH but is not a type supported by Bundle")
                         return@filteredForEach
                     }
                     // TODO check bundlefunpostfix BEFORE codegen starts
                     val kvp = generateBundleKeyValuePair(ksPropertyDeclaration)
                     bundleKeyValuePairs[kvp.first] = kvp.second
-                    funBuilder.addStatement("bundle.put$bundleFunPostfix(${kvp.first}, activity.${ksPropertyDeclaration.simpleName.asString()})")
+                    funBuilder.addStatement("bundle.put${bundleFunPostfixRet.postfix}(${kvp.first}, activity.${ksPropertyDeclaration.simpleName.asString()})")
             }
             funBuilder.endControlFlow() // close is
         }
@@ -234,27 +234,36 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                 .forEach filteredForEach@ { ksPropertyDeclaration ->
                     val resolvedType = ksPropertyDeclaration.type.resolve()
                     val key = generateBundleKeyValuePair(ksPropertyDeclaration).first
-                    val primPostfix = getBundleFunPostfixForPrimitive(resolver, resolvedType)
-                    if (primPostfix != null) {
-                        // primitives always have default value
-                        funBuilder.addStatement("activity.${ksPropertyDeclaration.simpleName.asString()} = bundle.get$primPostfix($key)")
-                        return@filteredForEach
-                    }
-                    // next check arrays and ArrayList<out String!>
-                    // TODO handle ArrayList<out String!>
-                    val nonPrimPostfix = getBundleFunPostfixForNonPrimitive(resolver, resolvedType)
-                    if (nonPrimPostfix != null) {
-                        // non-prims can be null, need to be careful if state is non-null
-                        if (resolvedType.isMarkedNullable) {
-                            funBuilder.addStatement("activity.${ksPropertyDeclaration.simpleName.asString()} = bundle.get$nonPrimPostfix($key)")
-                        } else {
-                            funBuilder.addStatement("bundle.get$nonPrimPostfix($key)?.let { activity.${ksPropertyDeclaration.simpleName.asString()} = it }")
+                    val bundleFunPostfixRet = getBundleFunPostfix(resolver, resolvedType)
+
+                    when (bundleFunPostfixRet.category) {
+                        BundleFunPostfixCategory.NON_NULL_PRIMITIVE -> {
+                            // primitives always have default value
+                            funBuilder.addStatement("activity.${ksPropertyDeclaration.simpleName.asString()} = bundle.get${bundleFunPostfixRet.postfix}($key)")
+                            return@filteredForEach
                         }
-                        return@filteredForEach
+                        BundleFunPostfixCategory.NULLABLE_KNOWN_TYPE -> {
+                            if (resolvedType.isMarkedNullable) {
+                                funBuilder.addStatement("activity.${ksPropertyDeclaration.simpleName.asString()} = bundle.get${bundleFunPostfixRet.postfix}($key)")
+                            } else {
+                                funBuilder.addStatement("bundle.get${bundleFunPostfixRet.postfix}($key)?.let { activity.${ksPropertyDeclaration.simpleName.asString()} = it }")
+                            }
+                            return@filteredForEach
+                        }
+                        BundleFunPostfixCategory.SUBCLASS_SERIALIZABLE_OR_PARCELABLE -> {
+                            if (resolvedType.isMarkedNullable) {
+                                funBuilder.addStatement("activity.${ksPropertyDeclaration.simpleName.asString()} = bundle.get${bundleFunPostfixRet.postfix}($key, ${resolvedType.toClassName()}::class.java)")
+                            } else {
+                                funBuilder.addStatement("bundle.get${bundleFunPostfixRet.postfix}($key, ${resolvedType.toClassName()}::class.java)?.let { activity.${ksPropertyDeclaration.simpleName.asString()} = it }")
+                            }
+                            return@filteredForEach
+                        }
+                        BundleFunPostfixCategory.NOT_APPLICABLE -> {
+                            logger.error("State ${ksPropertyDeclaration.simpleName.asString()} is marked to be retained across PROCESS_DEATH but is not a type supported by Bundle")
+                            return@filteredForEach
+                        }
                     }
-                    // TODO handle serializable, parcelable, bundle etc
-                    logger.error("State ${ksPropertyDeclaration.simpleName.asString()} is marked to be retained across PROCESS_DEATH but is not a type supported by Bundle")
-                    return@filteredForEach
+
                 }
             funBuilder.endControlFlow() // close is
         }

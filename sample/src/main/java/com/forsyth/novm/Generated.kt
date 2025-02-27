@@ -10,6 +10,8 @@ import androidx.lifecycle.LifecycleOwner
 
 // TODO GENERATE THIS (activity stuff only)
 // TODO then, figure out how to support fragments
+// TODO this needs to be generated and not just included in :lib
+// TODO because it has android deps (:lib is a plain kotlin/java lib with no android.jar)
 open class StateSavingActivity : AppCompatActivity() {
 
     val stateSaver = StateSaver()

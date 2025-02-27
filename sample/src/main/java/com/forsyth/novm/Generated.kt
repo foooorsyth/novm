@@ -8,61 +8,8 @@ import androidx.fragment.app.FragmentOnAttachListener
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 
-/*
-class MainActivityState {
-    var isToggled = false
-}
-class StateHolder {
-    var mainActivityState: MainActivityState? = null
-}
-
- */
-/*
-class StateSaver {
-    companion object {
-        const val KEY_MAINACTIVITY_MYTEXT = "MainActivity_myText"
-    }
-    fun saveStateConfigChange(activity: ComponentActivity) : StateHolder {
-        val stateHolder = StateHolder()
-        when (activity) {
-            is MainActivity -> {
-                if (stateHolder.mainActivityState == null) {
-                    stateHolder.mainActivityState = MainActivityState()
-                }
-                stateHolder.mainActivityState!!.isToggled = activity.isToggled
-            }
-        }
-        return stateHolder
-    }
-
-    fun restoreStateConfigChange(activity: ComponentActivity, stateHolder: StateHolder) {
-        when (activity) {
-            is MainActivity -> {
-                if (stateHolder.mainActivityState != null) {
-                    activity.isToggled = stateHolder.mainActivityState!!.isToggled
-                }
-            }
-        }
-    }
-
-    fun saveStateBundle(activity: ComponentActivity, bundle: Bundle) {
-        when (activity) {
-            is MainActivity -> {
-                bundle.putString(KEY_MAINACTIVITY_MYTEXT, activity.myText)
-            }
-        }
-    }
-
-    fun restoreStateBundle(activity: ComponentActivity, bundle: Bundle) {
-        when (activity) {
-            is MainActivity -> {
-                activity.myText = bundle.getString(KEY_MAINACTIVITY_MYTEXT)
-            }
-        }
-    }
-
-}
- */
+// TODO GENERATE THIS (activity stuff only)
+// TODO then, figure out how to support fragments
 open class StateSavingActivity : AppCompatActivity() {
 
     val stateSaver = StateSaver()
@@ -73,6 +20,9 @@ open class StateSavingActivity : AppCompatActivity() {
         }
 
         override fun onDestroy(owner: LifecycleOwner) {
+            if (this@StateSavingActivity.isChangingConfigurations) {
+
+            }
             fragmentMemory.remove(owner as Fragment)
         }
     }

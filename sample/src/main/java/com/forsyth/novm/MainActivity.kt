@@ -13,31 +13,31 @@ data class SerializableData(
 
 class MainActivity : StateSavingActivity() {
 
-    @State(retainAcross = CONFIGURATION_CHANGE)
+    @Retain(across = CONFIGURATION_CHANGE)
     var isToggled = false
 
-    @State(retainAcross = CONFIGURATION_CHANGE)
+    @Retain(across = CONFIGURATION_CHANGE)
     var someNullableDouble: Double? = null
 
-    @State(retainAcross = PROCESS_DEATH)
+    @Retain(across = PROCESS_DEATH)
     var myText: String? = null
 
-    @State(retainAcross = PROCESS_DEATH)
+    @Retain(across = PROCESS_DEATH)
     var intArray: IntArray = intArrayOf(0)
 
-    @State(retainAcross = PROCESS_DEATH)
+    @Retain(across = PROCESS_DEATH)
     var primTest: Int = 4
 
-    @State(retainAcross = PROCESS_DEATH)
+    @Retain(across = PROCESS_DEATH)
     var stringArraytest: Array<String>? = null
 
-    @State(retainAcross = PROCESS_DEATH)
+    @Retain(across = PROCESS_DEATH)
     var intArrayListTest: ArrayList<Int>? = null
 
-    @State(retainAcross = PROCESS_DEATH)
+    @Retain(across = PROCESS_DEATH)
     var bundle: Bundle? = null
 
-    @State(retainAcross = PROCESS_DEATH)
+    @Retain(across = PROCESS_DEATH)
     var serializable: SerializableData = SerializableData("foo", 5)
 
 

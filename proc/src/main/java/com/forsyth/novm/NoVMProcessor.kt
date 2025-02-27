@@ -29,9 +29,9 @@ const val COMPONENT_ACTIVITY_QUALIFIED_NAME = "androidx.activity.ComponentActivi
 
 class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : SymbolProcessor {
     override fun process(resolver: Resolver): List<KSAnnotated> {
-        val stateSymbols = resolver.getSymbolsWithAnnotation(State::class.qualifiedName!!, false).toList()
+        val retainSymbols = resolver.getSymbolsWithAnnotation(Retain::class.qualifiedName!!, false).toList()
         val activityToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>> = mutableMapOf()
-        stateSymbols.forEach { stateNode ->
+        retainSymbols.forEach { stateNode ->
             val propertyDecl = stateNode as? KSPropertyDeclaration
             if (propertyDecl == null) {
                 logger.error("@State must annotate a property declaration, skipping...")
@@ -180,11 +180,11 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
             funBuilder.beginControlFlow("is ${activityToStateEntry.key} -> {")
             activityToStateEntry.value
                 .filter { ksPropertyDeclaration ->
-                    ksPropertyDeclaration.getAnnotationsByType(State::class).toList().first().retainAcross == StateDestroyingEvent.PROCESS_DEATH
+                    ksPropertyDeclaration.getAnnotationsByType(Retain::class).toList().first().across == StateDestroyingEvent.PROCESS_DEATH
                 }
                 .forEach filteredForEach@ { ksPropertyDeclaration ->
                     val bundleFunPostfixRet = getBundleFunPostfix(resolver, ksPropertyDeclaration)
-                    if (bundleFunPostfixRet.postfix == null) {
+                    if (bundleFunPostfixRet.category == BundleFunPostfixCategory.NOT_APPLICABLE) {
                         logger.error("State ${ksPropertyDeclaration.simpleName.asString()} is marked to be retained across PROCESS_DEATH but is not a type supported by Bundle")
                         return@filteredForEach
                     }
@@ -229,7 +229,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
             funBuilder.beginControlFlow("is ${activityToStateEntry.key} -> {")
             activityToStateEntry.value
                 .filter { ksPropertyDeclaration ->
-                    ksPropertyDeclaration.getAnnotationsByType(State::class).toList().first().retainAcross == StateDestroyingEvent.PROCESS_DEATH
+                    ksPropertyDeclaration.getAnnotationsByType(Retain::class).toList().first().across == StateDestroyingEvent.PROCESS_DEATH
                 }
                 .forEach filteredForEach@ { ksPropertyDeclaration ->
                     val resolvedType = ksPropertyDeclaration.type.resolve()
@@ -310,7 +310,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
             val activityStateHolderFieldName = "${lowercaseFirstLetter(classDeclOfActivity.simpleName.asString())}State"
             funBuilder.beginControlFlow("if (stateHolder.$activityStateHolderFieldName != null) {")
             activityToStateEntry.value.filter { ksPropertyDeclaration ->
-               ksPropertyDeclaration.getAnnotationsByType(State::class).toList().first().retainAcross == StateDestroyingEvent.CONFIGURATION_CHANGE
+               ksPropertyDeclaration.getAnnotationsByType(Retain::class).toList().first().across == StateDestroyingEvent.CONFIGURATION_CHANGE
             }
             .forEach { ksPropertyDeclaration ->
                 // need to find equivalent field in state holder for this activity
@@ -362,7 +362,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                 "stateHolder.$activityStateHolderFieldName = ${classDeclOfActivity.simpleName.asString()}State()"
             )
             entry.value.filter { ksPropertyDeclaration ->
-                ksPropertyDeclaration.getAnnotationsByType(State::class).toList().first().retainAcross == StateDestroyingEvent.CONFIGURATION_CHANGE
+                ksPropertyDeclaration.getAnnotationsByType(Retain::class).toList().first().across == StateDestroyingEvent.CONFIGURATION_CHANGE
             }
             .forEach { propertyDecl ->
                 // during save, nullability doesn't matter
@@ -405,9 +405,9 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
             val activityName = resolver.getClassDeclarationByName(entry.key)!!.simpleName.asString()
             val typeSpecBuilder = TypeSpec.classBuilder(activityName + "State") // TODO dangerous, check for collisions
             entry.value.forEach { propDecl ->
-                val stateAnn = propDecl.getAnnotationsByType(State::class).toList().first()
+                val retainAnn = propDecl.getAnnotationsByType(Retain::class).toList().first()
                 // only put into the state holder if we're retaining across config change
-                if (stateAnn.retainAcross == StateDestroyingEvent.CONFIGURATION_CHANGE) {
+                if (retainAnn.across == StateDestroyingEvent.CONFIGURATION_CHANGE) {
                     val resolvedType = propDecl.type.resolve()
                     val canUseDefaultVal = isBuiltInWithDefaultValue(resolver, resolvedType)
                     val propBuilder = PropertySpec.builder(

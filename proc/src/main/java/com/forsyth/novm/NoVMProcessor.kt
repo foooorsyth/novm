@@ -12,7 +12,9 @@ import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
+import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
@@ -46,11 +48,12 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                 logger.error("@State must be declared within a ComponentActivity, skipping ${propertyDecl.simpleName}")
                 return@forEach
             }
-            val isSubclassOfComponentActivity = isSubclassOf(parentClassDecl, COMPONENT_ACTIVITY_QUALIFIED_NAME)
-            if (!isSubclassOfComponentActivity) {
-                logger.error("@State must be declared within a ComponentActivity, skipping ${propertyDecl.simpleName}")
-                return@forEach
-            }
+            // TODO investigate
+//            val isSubclassOfComponentActivity = isSubclassOf(parentClassDecl, COMPONENT_ACTIVITY_QUALIFIED_NAME)
+//            if (!isSubclassOfComponentActivity) {
+//                logger.error("@State must be declared within a ComponentActivity, skipping ${propertyDecl.simpleName}")
+//                return@forEach
+//            }
             if (parentClassDecl.isLocal()) {
                 logger.error("@State cannot be contained by local declaration, skipping $${propertyDecl.simpleName}")
                 return@forEach
@@ -71,7 +74,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
         val activityContainingFiles = activityToStateMap.keys.mapNotNull { activityFullyQualified ->
             resolver.getClassDeclarationByName(activityFullyQualified)?.containingFile
         }
-        val fileName = "NoVMGenerated"
+        val noVMDynamicFileName = "NoVMDynamic"
         val packageName = resolver.getClassDeclarationByName(activityToStateMap.keys.first())!!.packageName.asString() // TODO improve, get app package name from manifest
         val stateHoldersForActivities = generateStateHoldersForActivities(resolver, activityToStateMap)
         val topLevelStateHolder = generateTopLevelStateHolder(packageName, stateHoldersForActivities)
@@ -82,15 +85,160 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
             stateHoldersForActivities
             )
 
-        FileSpec.builder(packageName, fileName)
+        FileSpec.builder(packageName, noVMDynamicFileName)
             .addImport("android.os", "Bundle")
             .addImport("androidx.annotation", "CallSuper")
             .addImport("androidx.appcompat.app", "AppCompatActivity")
             .addTypes(stateHoldersForActivities.values)
             .addType(topLevelStateHolder)
             .addType(stateSaver)
+            // StateSaver interface
+            // TODO separate these fun scaffolds out into their own functions and reuse them
+            // TODO in the functions that generate the full impl functions
+            .addType(
+                TypeSpec.interfaceBuilder("StateSaver")
+                    .addFunction(
+                        FunSpec.builder("saveStateConfigChange")
+                            .addParameter(
+                                ParameterSpec.builder(
+                                    "activity",
+                                    ClassName("androidx.activity", "ComponentActivity")
+                                )
+                                    .build()
+                            )
+                            .returns(ClassName(packageName, "StateHolder"))
+                            .addModifiers(KModifier.ABSTRACT)
+                            .build()
+                    )
+                    .addFunction(
+                        FunSpec.builder("restoreStateConfigChange")
+                            .addParameter(
+                                ParameterSpec.builder(
+                                    "activity",
+                                    ClassName("androidx.activity", "ComponentActivity")
+                                )
+                                    .build()
+                            )
+                            .addParameter(
+                                ParameterSpec.builder(
+                                    "stateHolder",
+                                    ClassName(packageName, "StateHolder")
+                                )
+                                    .build()
+                            )
+                            .addModifiers(KModifier.ABSTRACT)
+                            .build()
+                    )
+                    .addFunction(
+                        FunSpec.builder("saveStateBundle")
+                            .addParameter(
+                                ParameterSpec.builder(
+                                    "activity",
+                                    ClassName("androidx.activity", "ComponentActivity")
+                                )
+                                    .build()
+                            )
+                            .addParameter(
+                                ParameterSpec.builder(
+                                    "bundle",
+                                    ClassName("android.os", "Bundle")
+                                )
+                                    .build()
+                            )
+                            .addModifiers(KModifier.ABSTRACT)
+                            .build()
+                    )
+                    .addFunction(
+                        FunSpec.builder("restoreStateBundle")
+                            .addParameter(
+                                ParameterSpec.builder(
+                                    "activity",
+                                    ClassName("androidx.activity", "ComponentActivity")
+                                )
+                                    .build()
+                            )
+                            .addParameter(
+                                ParameterSpec.builder(
+                                    "bundle",
+                                    ClassName("android.os", "Bundle")
+                                )
+                                    .build()
+                            )
+                            .addModifiers(KModifier.ABSTRACT)
+                            .build()
+                    )
+                    .build()
+            )
+            .addFunction(
+                FunSpec.builder("provideStateSaver")
+                    .returns(ClassName(packageName, "StateSaver"))
+                    .addStatement("%L", "return GeneratedStateSaver()")
+                    .build()
+            )
             .build()
             .writeTo(codeGenerator, Dependencies(true, *activityContainingFiles.toTypedArray()))
+        FileSpec.builder(packageName, "NoVMStatic")
+            .addType(
+                TypeSpec.classBuilder("StateSavingActivity")
+                    .addModifiers(KModifier.OPEN)
+                    .superclass(ClassName("androidx.appcompat.app", "AppCompatActivity"))
+                    .addProperty(
+                        PropertySpec.builder("stateSaver", ClassName(packageName, "StateSaver"))
+                            .initializer("%L", "provideStateSaver()")
+                            .build()
+                    )
+                    .addFunction(
+                        FunSpec.builder("onCreate")
+                            .addModifiers(KModifier.OVERRIDE)
+                            .addAnnotation(ClassName("androidx.annotation", "CallSuper"))
+                            .addParameter(
+                                ParameterSpec
+                                    .builder("savedInstanceState", ClassName("android.os", "Bundle").copy(nullable = true))
+                                    .build()
+                            )
+                            .addStatement("%L", "super.onCreate(savedInstanceState)")
+                            .addStatement("%L", "@Suppress(\"DEPRECATION\")")
+                            .addCode(
+                                "(lastCustomNonConfigurationInstance as? StateHolder)?.let { retainedState ->\n" +
+                                "  stateSaver.restoreStateConfigChange(this, retainedState)\n" +
+                                "}\n" +
+                                "if (savedInstanceState != null) {\n" +
+                                "  stateSaver.restoreStateBundle(this, savedInstanceState)\n" +
+                                "}"
+                            )
+                            .build()
+                    )
+                    .addFunction(
+                        FunSpec.builder("onSaveInstanceState")
+                            .addModifiers(KModifier.OVERRIDE)
+                            .addAnnotation(ClassName("androidx.annotation", "CallSuper"))
+                            .addParameter(
+                                ParameterSpec
+                                    .builder("outState", ClassName("android.os", "Bundle"))
+                                    .build()
+                            )
+                            .addStatement("%L", "stateSaver.saveStateBundle(this, outState)")
+                            .addStatement("%L", "super.onSaveInstanceState(outState)")
+                            .build()
+                    )
+                    .addFunction(
+                        FunSpec.builder("onRetainCustomNonConfigurationInstance")
+                            .addModifiers(KModifier.OVERRIDE)
+                            .addAnnotation(ClassName("androidx.annotation", "CallSuper"))
+                            .addAnnotation(
+                                AnnotationSpec
+                                    .builder(ClassName("kotlin", "Suppress"))
+                                    .addMember("%L", "\"OVERRIDE_DEPRECATION\"")
+                                    .build()
+                            )
+                            .addStatement("%L", "return stateSaver.saveStateConfigChange(this)")
+                            .returns(ClassName("kotlin", "Any").copy(nullable = true))
+                            .build()
+                    )
+                    .build()
+            )
+            .build()
+            .writeTo(codeGenerator, Dependencies(true))
     }
 
     private fun generateStateSaver(packageName: String,
@@ -104,7 +252,8 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                     resolver,
                     activityToStateMap,
                 )
-        val builder = TypeSpec.classBuilder("StateSaver") //dangerous, collisions
+        val builder = TypeSpec.classBuilder("GeneratedStateSaver") //dangerous, collisions // TODO const string
+            .addSuperinterface(ClassName(packageName, "StateSaver")) // TODO const string
             .addFunction(
                 generateSaveStateConfigChange(
                     packageName,
@@ -175,6 +324,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                 )
                     .build()
             )
+            .addModifiers(KModifier.OVERRIDE)
             .beginControlFlow("when (activity) {")
         activityToStateMap.forEach { activityToStateEntry ->
             funBuilder.beginControlFlow("is ${activityToStateEntry.key} -> {")
@@ -224,6 +374,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                 )
                     .build()
             )
+            .addModifiers(KModifier.OVERRIDE)
             .beginControlFlow("when (activity) {")
         activityToStateMap.forEach { activityToStateEntry ->
             funBuilder.beginControlFlow("is ${activityToStateEntry.key} -> {")
@@ -301,6 +452,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                 )
                     .build()
             )
+            .addModifiers(KModifier.OVERRIDE)
             .beginControlFlow("when (activity) {")
 
 
@@ -351,6 +503,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                     .build()
             )
             .returns(ClassName(packageName, "StateHolder"))
+            .addModifiers(KModifier.OVERRIDE)
             .addStatement("val stateHolder = StateHolder()")
             .beginControlFlow("when (activity) {")
 

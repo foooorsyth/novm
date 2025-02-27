@@ -2,6 +2,7 @@ package com.forsyth.novm
 
 
 import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
 import com.forsyth.novm.StateDestroyingEvent.CONFIGURATION_CHANGE
 import com.forsyth.novm.StateDestroyingEvent.PROCESS_DEATH
 import java.io.Serializable

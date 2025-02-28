@@ -12,9 +12,9 @@ import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
+import com.google.devtools.ksp.validate
 import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.ClassName
-import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
@@ -30,11 +30,34 @@ import java.util.Locale
 const val COMPONENT_ACTIVITY_QUALIFIED_NAME = "androidx.activity.ComponentActivity"
 
 class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : SymbolProcessor {
+    var pass = 1
     override fun process(resolver: Resolver): List<KSAnnotated> {
         val retainSymbols = resolver.getSymbolsWithAnnotation(Retain::class.qualifiedName!!, false).toList()
+        // TODO get package, statesavingactivity name from ksp options
+        val isStateSavingActivityValid = resolver.getClassDeclarationByName("com.forsyth.novm.StateSavingActivity")?.validate() == true
+        val recheck = mutableListOf<KSAnnotated>()
         val activityToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>> = mutableMapOf()
-        retainSymbols.forEach { stateNode ->
-            val propertyDecl = stateNode as? KSPropertyDeclaration
+        ensureSupported(
+            retainSymbols,
+            isStateSavingActivityValid,
+            recheck,
+            activityToStateMap
+        )
+        if (activityToStateMap.isNotEmpty() && !isStateSavingActivityValid ) {
+            generateCode(resolver, activityToStateMap)
+        }
+        //logger.warn("pass: $pass")
+        //logger.warn("sizeof revalidate list: ${recheck.size}")
+        pass += 1
+        return recheck
+    }
+
+    private fun ensureSupported(retainSymbols: List<KSAnnotated>,
+                                isStateSavingActivityValid: Boolean,
+                                recheck: MutableList<KSAnnotated>,
+                                activityToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>>) {
+        retainSymbols.forEach { retainNode: KSAnnotated ->
+            val propertyDecl = retainNode as? KSPropertyDeclaration
             if (propertyDecl == null) {
                 logger.error("@State must annotate a property declaration, skipping...")
                 return@forEach
@@ -48,12 +71,16 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                 logger.error("@State must be declared within a ComponentActivity, skipping ${propertyDecl.simpleName}")
                 return@forEach
             }
-            // TODO investigate
-//            val isSubclassOfComponentActivity = isSubclassOf(parentClassDecl, COMPONENT_ACTIVITY_QUALIFIED_NAME)
-//            if (!isSubclassOfComponentActivity) {
-//                logger.error("@State must be declared within a ComponentActivity, skipping ${propertyDecl.simpleName}")
-//                return@forEach
-//            }
+            val isSubclassOfComponentActivity = isSubclassOf(parentClassDecl, COMPONENT_ACTIVITY_QUALIFIED_NAME)
+            if (!isSubclassOfComponentActivity) {
+                if (!isStateSavingActivityValid) {
+                    //logger.warn("@State must be declared within a ComponentActivity, checking ${propertyDecl.simpleName} again after codegen...")
+                    recheck.add(retainNode)
+                } else {
+                    logger.error("@State must be declared within a ComponentActivity: ${propertyDecl.simpleName}")
+                    return
+                }
+            }
             if (parentClassDecl.isLocal()) {
                 logger.error("@State cannot be contained by local declaration, skipping $${propertyDecl.simpleName}")
                 return@forEach
@@ -64,10 +91,6 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                 activityToStateMap[parentClassDecl.qualifiedName!!.asString()]!!.add(propertyDecl)
             }
         }
-        if (activityToStateMap.isNotEmpty()) {
-            generateCode(resolver, activityToStateMap)
-        }
-        return emptyList()
     }
 
     private fun generateCode(resolver: Resolver, activityToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>>) {

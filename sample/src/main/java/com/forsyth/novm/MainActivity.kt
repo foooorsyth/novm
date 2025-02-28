@@ -2,6 +2,7 @@ package com.forsyth.novm
 
 
 import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
 import com.forsyth.novm.StateDestroyingEvent.CONFIGURATION_CHANGE
 import com.forsyth.novm.StateDestroyingEvent.PROCESS_DEATH
 import java.io.Serializable
@@ -35,10 +36,10 @@ class MainActivity : StateSavingActivity() {
     var intArrayListTest: ArrayList<Int>? = null
 
     @Retain(across = [PROCESS_DEATH])
-    var bundle: Bundle? = null
+    var bundleTest: Bundle? = null
 
     @Retain(across = [PROCESS_DEATH])
-    var serializable: SerializableData = SerializableData("foo", 5)
+    var serializableTest: SerializableData = SerializableData("foo", 5)
 
 
     override fun onCreate(savedInstanceState: Bundle?) {

@@ -43,7 +43,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
             recheck,
             activityToStateMap
         )
-        if (activityToStateMap.isNotEmpty() && !isStateSavingActivityValid ) {
+        if (activityToStateMap.isNotEmpty() && !isStateSavingActivityValid) {
             generateCode(resolver, activityToStateMap)
         }
         //logger.warn("pass: $pass")

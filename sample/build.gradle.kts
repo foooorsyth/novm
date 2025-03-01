@@ -41,6 +41,8 @@ dependencies {
     implementation(project(":lib"))
     implementation(project(":proc"))
     ksp(project(":proc"))
+    val fragment_version = "1.8.6"
+    implementation("androidx.fragment:fragment-ktx:$fragment_version")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)

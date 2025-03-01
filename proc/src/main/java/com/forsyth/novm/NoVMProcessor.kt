@@ -407,7 +407,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
 
     private fun generateBundleKeyValuePair(ksPropertyDeclaration: KSPropertyDeclaration) : Pair<String, String> {
         val value = "${ksPropertyDeclaration.parentDeclaration!!.simpleName.asString()}_${ksPropertyDeclaration.simpleName.asString()}"
-        val key = "KEY_${value.uppercase()}"
+        val key = "KEY_${value}"
         return key to value
     }
 

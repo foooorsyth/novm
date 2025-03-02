@@ -2,9 +2,16 @@ package com.forsyth.novm
 
 
 import android.os.Bundle
+import android.util.Log
 import androidx.core.os.bundleOf
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
+import androidx.fragment.app.FragmentOnAttachListener
 import androidx.fragment.app.add
 import androidx.fragment.app.commit
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 import com.forsyth.novm.StateDestroyingEvent.CONFIGURATION_CHANGE
 import com.forsyth.novm.StateDestroyingEvent.PROCESS_DEATH
 import java.io.Serializable
@@ -13,6 +20,8 @@ data class SerializableData(
     val str: String,
     val myInt: Int
 ): Serializable
+
+const val TAG = "MainActivity"
 
 class MainActivity : StateSavingActivity() {
 
@@ -43,14 +52,52 @@ class MainActivity : StateSavingActivity() {
     @Retain(across = [PROCESS_DEATH])
     var serializableTest: SerializableData = SerializableData("foo", 5)
 
+    val attachListener = FragmentOnAttachListener { fragmentManager, fragment ->
+        Log.d(TAG, "frag attach: (class: ${fragment.javaClass}, id: ${fragment.id}, tag: ${fragment.tag}")
+        fragment.lifecycle.addObserver(lifecycleObserver)
+    }
+
+    val lifecycleObserver = object: DefaultLifecycleObserver {
+        override fun onCreate(owner: LifecycleOwner) {
+            val fragment = owner as Fragment
+            Log.d(TAG, "frag onCreate: (class: ${fragment.javaClass}, id: ${fragment.id}, tag: ${fragment.tag}")
+        }
+
+        override fun onStart(owner: LifecycleOwner) {
+            val fragment = owner as Fragment
+            Log.d(TAG, "frag onStart: (class: ${fragment.javaClass}, id: ${fragment.id}, tag: ${fragment.tag}")
+        }
+
+        override fun onResume(owner: LifecycleOwner) {
+            val fragment = owner as Fragment
+            Log.d(TAG, "frag onResume: (class: ${fragment.javaClass}, id: ${fragment.id}, tag: ${fragment.tag}")
+        }
+
+        override fun onPause(owner: LifecycleOwner) {
+            val fragment = owner as Fragment
+            Log.d(TAG, "frag onPause: (class: ${fragment.javaClass}, id: ${fragment.id}, tag: ${fragment.tag}")
+        }
+
+        override fun onStop(owner: LifecycleOwner) {
+            val fragment = owner as Fragment
+            Log.d(TAG, "frag onStop: (class: ${fragment.javaClass}, id: ${fragment.id}, tag: ${fragment.tag}")
+        }
+
+        override fun onDestroy(owner: LifecycleOwner) {
+            val fragment = owner as Fragment
+            Log.d(TAG, "frag onDestroy: (class: ${fragment.javaClass}, id: ${fragment.id}, tag: ${fragment.tag}")
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        supportFragmentManager.addFragmentOnAttachListener(attachListener)
         if (savedInstanceState == null) {
             supportFragmentManager.commit {
                 val bundle = bundleOf(ARG_PARAM1 to 0, ARG_PARAM2 to 1)
                 setReorderingAllowed(true)
-                add<TestFragment>(R.id.fragment_container, args = bundle)
+                add<TestFragment>(R.id.fragment_container, tag = "1234", args = bundle)
             }
         }
     }

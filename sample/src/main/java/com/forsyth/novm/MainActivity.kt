@@ -3,6 +3,8 @@ package com.forsyth.novm
 
 import android.os.Bundle
 import androidx.core.os.bundleOf
+import androidx.fragment.app.add
+import androidx.fragment.app.commit
 import com.forsyth.novm.StateDestroyingEvent.CONFIGURATION_CHANGE
 import com.forsyth.novm.StateDestroyingEvent.PROCESS_DEATH
 import java.io.Serializable

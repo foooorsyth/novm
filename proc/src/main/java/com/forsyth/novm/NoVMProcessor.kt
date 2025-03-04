@@ -177,11 +177,21 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                             .addCode(
                                 "(lastCustomNonConfigurationInstance as? StateHolder)?.let { retainedState ->\n" +
                                         "  stateSaver.restoreStateConfigChange(this, retainedState)\n" +
-                                        "}\n" +
-                                        "if (savedInstanceState != null) {\n" +
-                                        "  stateSaver.restoreStateBundle(this, savedInstanceState)\n" +
-                                        "}"
+                                        "}\n"
                             )
+                            .build()
+                    )
+                    .addFunction(
+                        FunSpec.builder("onRestoreInstanceState")
+                            .addModifiers(KModifier.OVERRIDE)
+                            .addAnnotation(ClassName("androidx.annotation", "CallSuper"))
+                            .addParameter(
+                                ParameterSpec
+                                    .builder("savedInstanceState", ClassName("android.os", "Bundle"))
+                                    .build()
+                            )
+                            .addStatement("%L", "super.onRestoreInstanceState(savedInstanceState)")
+                            .addStatement("%L", "stateSaver.restoreStateBundle(this, savedInstanceState)")
                             .build()
                     )
                     .addFunction(

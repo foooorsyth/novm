@@ -5,12 +5,10 @@ import android.os.Bundle
 import android.util.Log
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentOnAttachListener
 import androidx.fragment.app.add
 import androidx.fragment.app.commit
 import androidx.lifecycle.DefaultLifecycleObserver
-import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import com.forsyth.novm.StateDestroyingEvent.CONFIGURATION_CHANGE
 import com.forsyth.novm.StateDestroyingEvent.PROCESS_DEATH

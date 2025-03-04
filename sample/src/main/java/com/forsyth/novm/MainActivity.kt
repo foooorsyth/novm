@@ -3,7 +3,6 @@ package com.forsyth.novm
 
 import android.os.Bundle
 import android.util.Log
-import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentOnAttachListener
 import androidx.fragment.app.add
@@ -93,9 +92,8 @@ class MainActivity : StateSavingActivity() {
         supportFragmentManager.addFragmentOnAttachListener(attachListener)
         if (savedInstanceState == null) {
             supportFragmentManager.commit {
-                val bundle = bundleOf(ARG_PARAM1 to 0, ARG_PARAM2 to 1)
                 setReorderingAllowed(true)
-                add<TestFragment>(R.id.fragment_container, tag = "1234", args = bundle)
+                add<TestFragment>(R.id.fragment_container, tag = "1234")
             }
         }
     }

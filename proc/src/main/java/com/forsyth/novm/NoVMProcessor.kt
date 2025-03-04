@@ -98,7 +98,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
             resolver.getClassDeclarationByName(activityFullyQualified)?.containingFile
         }
         val noVMDynamicFileName = "NoVMDynamic"
-        val packageName = resolver.getClassDeclarationByName(activityToStateMap.keys.first())!!.packageName.asString() // TODO improve, get app package name from manifest
+        val packageName = resolver.getClassDeclarationByName(activityToStateMap.keys.first())!!.packageName.asString() // TODO improve, get app package name from ksp options
         val stateHoldersForActivities = generateStateHoldersForActivities(resolver, activityToStateMap)
         val topLevelStateHolder = generateTopLevelStateHolder(packageName, stateHoldersForActivities)
         val stateSaver = generateStateSaver(packageName,
@@ -149,11 +149,11 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
             .build()
             .writeTo(codeGenerator, Dependencies(true, *activityContainingFiles.toTypedArray()))
 
-        generateStaticFile(packageName).writeTo(codeGenerator, Dependencies(true))
+        generateStateSavingActivityFile(packageName).writeTo(codeGenerator, Dependencies(true))
     }
 
-    private fun generateStaticFile(packageName: String) : FileSpec {
-        return FileSpec.builder(packageName, "NoVMStatic")
+    private fun generateStateSavingActivityFile(packageName: String) : FileSpec {
+        return FileSpec.builder(packageName, "StateSavingActivity")
             .addType(
                 TypeSpec.classBuilder("StateSavingActivity")
                     .addModifiers(KModifier.OPEN)

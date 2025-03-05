@@ -1,18 +1,19 @@
 package com.forsyth.novm
 
 import android.os.Bundle
-import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 
-class TestFragment : Fragment() {
+class TestFragment : StateSavingFragment() {
+    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    var foo: Boolean = false
+    // TODO bug: nullable prims for PROCESS_DEATH end up in serializable?
+    // TODO investigate
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (savedInstanceState != null) {
-            // TODO restore state
-        }
     }
 
     override fun onCreateView(
@@ -22,13 +23,6 @@ class TestFragment : Fragment() {
         // Inflate the layout for this fragment
         return inflater.inflate(R.layout.fragment_test, container, false)
     }
-
-    override fun onSaveInstanceState(outState: Bundle) {
-        Log.d(TAG, "onSaveInstanceState enter")
-        super.onSaveInstanceState(outState)
-        Log.d(TAG, "onSaveInstanceState exit")
-    }
-
     companion object {
         const val TAG = "TestFragment"
         @JvmStatic

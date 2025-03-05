@@ -292,8 +292,8 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
         return FunSpec.builder("saveStateBundle")
             .addParameter(
                 ParameterSpec.builder(
-                    "activity",
-                    ClassName("androidx.activity", "ComponentActivity")
+                    "component",
+                    ClassName("kotlin", "Any")
                 )
                     .build()
             )
@@ -314,7 +314,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
         val bundleKeyValuePairs = mutableMapOf<String, String>()
         val funBuilder = generateSaveStateBundleSignature()
             .addModifiers(KModifier.OVERRIDE)
-            .beginControlFlow("when (activity) {")
+            .beginControlFlow("when (component) {")
         activityToStateMap.forEach { activityToStateEntry ->
             funBuilder.beginControlFlow("is ${activityToStateEntry.key} -> {")
             activityToStateEntry.value
@@ -330,7 +330,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                     // TODO check bundlefunpostfix BEFORE codegen starts
                     val kvp = generateBundleKeyValuePair(ksPropertyDeclaration)
                     bundleKeyValuePairs[kvp.first] = kvp.second
-                    funBuilder.addStatement("bundle.put${bundleFunPostfixRet.postfix}(${kvp.first}, activity.${ksPropertyDeclaration.simpleName.asString()})")
+                    funBuilder.addStatement("bundle.put${bundleFunPostfixRet.postfix}(${kvp.first}, component.${ksPropertyDeclaration.simpleName.asString()})")
             }
             funBuilder.endControlFlow() // close is
         }
@@ -346,8 +346,8 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
         return FunSpec.builder("restoreStateBundle")
             .addParameter(
                 ParameterSpec.builder(
-                    "activity",
-                    ClassName("androidx.activity", "ComponentActivity")
+                    "component",
+                    ClassName("kotlin", "Any")
                 )
                     .build()
             )
@@ -368,7 +368,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
         ): FunSpec {
         val funBuilder = generateRestoreStateBundleSignature()
             .addModifiers(KModifier.OVERRIDE)
-            .beginControlFlow("when (activity) {")
+            .beginControlFlow("when (component) {")
         activityToStateMap.forEach { activityToStateEntry ->
             funBuilder.beginControlFlow("is ${activityToStateEntry.key} -> {")
             activityToStateEntry.value
@@ -383,22 +383,22 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                     when (bundleFunPostfixRet.category) {
                         BundleFunPostfixCategory.NON_NULL_PRIMITIVE -> {
                             // primitives always have default value
-                            funBuilder.addStatement("activity.${ksPropertyDeclaration.simpleName.asString()} = bundle.get${bundleFunPostfixRet.postfix}($key)")
+                            funBuilder.addStatement("component.${ksPropertyDeclaration.simpleName.asString()} = bundle.get${bundleFunPostfixRet.postfix}($key)")
                             return@filteredForEach
                         }
                         BundleFunPostfixCategory.NULLABLE_KNOWN_TYPE -> {
                             if (resolvedType.isMarkedNullable) {
-                                funBuilder.addStatement("activity.${ksPropertyDeclaration.simpleName.asString()} = bundle.get${bundleFunPostfixRet.postfix}($key)")
+                                funBuilder.addStatement("component.${ksPropertyDeclaration.simpleName.asString()} = bundle.get${bundleFunPostfixRet.postfix}($key)")
                             } else {
-                                funBuilder.addStatement("bundle.get${bundleFunPostfixRet.postfix}($key)?.let { activity.${ksPropertyDeclaration.simpleName.asString()} = it }")
+                                funBuilder.addStatement("bundle.get${bundleFunPostfixRet.postfix}($key)?.let { component.${ksPropertyDeclaration.simpleName.asString()} = it }")
                             }
                             return@filteredForEach
                         }
                         BundleFunPostfixCategory.SUBCLASS_SERIALIZABLE_OR_PARCELABLE -> {
                             if (resolvedType.isMarkedNullable) {
-                                funBuilder.addStatement("activity.${ksPropertyDeclaration.simpleName.asString()} = bundle.get${bundleFunPostfixRet.postfix}($key, ${resolvedType.toClassName()}::class.java)")
+                                funBuilder.addStatement("component.${ksPropertyDeclaration.simpleName.asString()} = bundle.get${bundleFunPostfixRet.postfix}($key, ${resolvedType.toClassName()}::class.java)")
                             } else {
-                                funBuilder.addStatement("bundle.get${bundleFunPostfixRet.postfix}($key, ${resolvedType.toClassName()}::class.java)?.let { activity.${ksPropertyDeclaration.simpleName.asString()} = it }")
+                                funBuilder.addStatement("bundle.get${bundleFunPostfixRet.postfix}($key, ${resolvedType.toClassName()}::class.java)?.let { component.${ksPropertyDeclaration.simpleName.asString()} = it }")
                             }
                             return@filteredForEach
                         }
@@ -425,8 +425,8 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
         return FunSpec.builder("restoreStateConfigChange")
             .addParameter(
                 ParameterSpec.builder(
-                    "activity",
-                    ClassName("androidx.activity", "ComponentActivity")
+                    "component",
+                    ClassName("kotlin", "Any")
                 )
                     .build()
             )
@@ -450,7 +450,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
         // TODO instead of manually recreating names below
         val funBuilder = generateRestoreStateConfigChangeSignature(packageName)
             .addModifiers(KModifier.OVERRIDE)
-            .beginControlFlow("when (activity) {")
+            .beginControlFlow("when (component) {")
 
 
         activityToStateMap.forEach { activityToStateEntry ->
@@ -468,11 +468,11 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                 val equivPropInStateHolder = typeSpecOfStateHolder.propertySpecs.first { it.name == ksPropertyDeclaration.simpleName.asString() }
                 if (equivPropInStateHolder.type.isNullable && !ksPropertyDeclaration.type.resolve().isMarkedNullable) {
                     funBuilder.beginControlFlow("if (stateHolder.$activityStateHolderFieldName!!.${ksPropertyDeclaration.simpleName.asString()} != null) {")
-                    funBuilder.addStatement("activity.${ksPropertyDeclaration.simpleName.asString()} = stateHolder.$activityStateHolderFieldName!!.${ksPropertyDeclaration.simpleName.asString()}!!")
+                    funBuilder.addStatement("component.${ksPropertyDeclaration.simpleName.asString()} = stateHolder.$activityStateHolderFieldName!!.${ksPropertyDeclaration.simpleName.asString()}!!")
                     funBuilder.endControlFlow()
                 }
                 else {
-                    funBuilder.addStatement("activity.${ksPropertyDeclaration.simpleName.asString()} = stateHolder.$activityStateHolderFieldName!!.${ksPropertyDeclaration.simpleName.asString()}")
+                    funBuilder.addStatement("component.${ksPropertyDeclaration.simpleName.asString()} = stateHolder.$activityStateHolderFieldName!!.${ksPropertyDeclaration.simpleName.asString()}")
                 }
             }
             funBuilder.endControlFlow() // close if
@@ -486,8 +486,8 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
         return FunSpec.builder("saveStateConfigChange")
             .addParameter(
                 ParameterSpec.builder(
-                    "activity",
-                    ClassName("androidx.activity", "ComponentActivity")
+                    "component",
+                    ClassName("kotlin", "Any")
                 )
                     .build()
             )
@@ -507,7 +507,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
         val funBuilder = generateSaveStateConfigChangeSignature(packageName)
             .addModifiers(KModifier.OVERRIDE)
             .addStatement("val stateHolder = StateHolder()")
-            .beginControlFlow("when (activity) {")
+            .beginControlFlow("when (component) {")
 
         activityToStateMap.forEach { entry ->
             val classDeclOfActivity = resolver.getClassDeclarationByName(entry.key)!!
@@ -522,7 +522,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
             .forEach { propertyDecl ->
                 // during save, nullability doesn't matter
                 funBuilder.addStatement(
-                    "stateHolder.$activityStateHolderFieldName!!.${propertyDecl.simpleName.asString()} = activity.${propertyDecl.simpleName.asString()}"
+                    "stateHolder.$activityStateHolderFieldName!!.${propertyDecl.simpleName.asString()} = component.${propertyDecl.simpleName.asString()}"
                 )
             }
             funBuilder.endControlFlow() // end is

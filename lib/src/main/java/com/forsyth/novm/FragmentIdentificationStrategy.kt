@@ -1,6 +1,6 @@
 package com.forsyth.novm
 
-enum class FragmentIdentifier {
+enum class FragmentIdentificationStrategy {
     TAG,
     CONTAINER_ID,
     CLASS

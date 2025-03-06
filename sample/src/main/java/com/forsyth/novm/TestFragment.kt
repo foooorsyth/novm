@@ -6,14 +6,9 @@ import android.view.View
 import android.view.ViewGroup
 
 class TestFragment : StateSavingFragment() {
+
     @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
     var foo: Boolean = false
-    // TODO bug: nullable prims for PROCESS_DEATH end up in serializable?
-    // TODO investigate
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,

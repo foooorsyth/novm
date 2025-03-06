@@ -171,6 +171,13 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                             .initializer("%L", "provideStateSaver()")
                             .build()
                     )
+                    .addProperty(
+                        PropertySpec.builder("identificationStrategy", ClassName(packageName, "FragmentIdentificationStrategy"))
+                            .initializer("%L", "FragmentIdentificationStrategy.TAG")
+                            .addModifiers(KModifier.OPEN)
+                            .mutable(true)
+                            .build()
+                    )
                     .addFunction(
                         FunSpec.builder("onCreate")
                             .addModifiers(KModifier.OVERRIDE)

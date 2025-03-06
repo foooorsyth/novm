@@ -50,51 +50,41 @@ class MainActivity : StateSavingActivity() {
     var serializableTest: SerializableData? = SerializableData("foo", 5)
 
     val attachListener = FragmentOnAttachListener { fragmentManager, fragment ->
-        Log.d(TAG, "frag attach: (class: ${fragment.javaClass}, id: ${fragment.id}, tag: ${fragment.tag}")
+        Log.d(TAG, "fraglistener attach: (class: ${fragment.javaClass}, id: ${fragment.id}, tag: ${fragment.tag}")
         fragment.lifecycle.addObserver(lifecycleObserver)
     }
 
     val lifecycleObserver = object: DefaultLifecycleObserver {
         override fun onCreate(owner: LifecycleOwner) {
             val fragment = owner as Fragment
-            Log.d(TAG, "frag onCreate: (class: ${fragment.javaClass}, id: ${fragment.id}, tag: ${fragment.tag}")
+            Log.d(TAG, "fraglistener onCreate: (class: ${fragment.javaClass}, id: ${fragment.id}, tag: ${fragment.tag}")
+            Log.d(TAG, "fraglistener: isChangingConfig?: ${this@MainActivity.isChangingConfigurations}")
         }
-
-        override fun onStart(owner: LifecycleOwner) {
-            val fragment = owner as Fragment
-            Log.d(TAG, "frag onStart: (class: ${fragment.javaClass}, id: ${fragment.id}, tag: ${fragment.tag}")
-        }
-
-        override fun onResume(owner: LifecycleOwner) {
-            val fragment = owner as Fragment
-            Log.d(TAG, "frag onResume: (class: ${fragment.javaClass}, id: ${fragment.id}, tag: ${fragment.tag}")
-        }
-
-        override fun onPause(owner: LifecycleOwner) {
-            val fragment = owner as Fragment
-            Log.d(TAG, "frag onPause: (class: ${fragment.javaClass}, id: ${fragment.id}, tag: ${fragment.tag}")
-        }
-
-        override fun onStop(owner: LifecycleOwner) {
-            val fragment = owner as Fragment
-            Log.d(TAG, "frag onStop: (class: ${fragment.javaClass}, id: ${fragment.id}, tag: ${fragment.tag}")
-        }
-
         override fun onDestroy(owner: LifecycleOwner) {
             val fragment = owner as Fragment
-            Log.d(TAG, "frag onDestroy: (class: ${fragment.javaClass}, id: ${fragment.id}, tag: ${fragment.tag}")
+            Log.d(TAG, "fraglistener onDestroy: (class: ${fragment.javaClass}, id: ${fragment.id}, tag: ${fragment.tag}")
+            Log.d(TAG, "fraglistener: isChangingConfig?: ${this@MainActivity.isChangingConfigurations}")
+            fragment.lifecycle.removeObserver(this)
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        Log.d(TAG, "onCreate before attach frag listener")
+        // NOTE: this listener MUST be setup before super.onCreate is called
+        // otherwise, after configuration change, fragments will re-attach
+        // BEFORE onAttachListener is added, making the listener useless (it won't get hit)
+        supportFragmentManager.addFragmentOnAttachListener(attachListener)
+        Log.d(TAG, "onCreate after attach frag listener")
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        supportFragmentManager.addFragmentOnAttachListener(attachListener)
         if (savedInstanceState == null) {
+            Log.d(TAG, "onCreate before frag commit")
             supportFragmentManager.commit {
                 setReorderingAllowed(true)
                 add<TestFragment>(R.id.fragment_container, tag = "1234")
             }
+            Log.d(TAG, "onCreate after frag commit")
         }
+        Log.d(TAG, "onCreate exit")
     }
 }

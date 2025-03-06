@@ -449,7 +449,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                         }
                         BundleFunPostfixCategory.SUBCLASS_SERIALIZABLE_OR_PARCELABLE -> {
                             if (resolvedType.isMarkedNullable) {
-                                funBuilder.addStatement("component.${ksPropertyDeclaration.simpleName.asString()} = bundle.get${bundleFunPostfixRet.postfix}($key, ${resolvedType.toClassName()}::class.java)")
+                                funBuilder.addStatement("component.${ksPropertyDeclaration.simpleName.asString()} = bundle.get${bundleFunPostfixRet.postfix}($key, ${resolvedType.makeNotNullable().toClassName()}::class.java)")
                             } else {
                                 funBuilder.addStatement("bundle.get${bundleFunPostfixRet.postfix}($key, ${resolvedType.toClassName()}::class.java)?.let { component.${ksPropertyDeclaration.simpleName.asString()} = it }")
                             }

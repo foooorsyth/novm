@@ -25,7 +25,7 @@ class MainActivity : StateSavingActivity() {
     @Retain(across = [CONFIGURATION_CHANGE])
     var isToggled = false
 
-    @Retain(across = [CONFIGURATION_CHANGE])
+    @Retain(across = [PROCESS_DEATH])
     var someNullableDouble: Double? = null
 
     @Retain(across = [PROCESS_DEATH])
@@ -47,7 +47,7 @@ class MainActivity : StateSavingActivity() {
     var bundleTest: Bundle? = null
 
     @Retain(across = [PROCESS_DEATH])
-    var serializableTest: SerializableData = SerializableData("foo", 5)
+    var serializableTest: SerializableData? = SerializableData("foo", 5)
 
     val attachListener = FragmentOnAttachListener { fragmentManager, fragment ->
         Log.d(TAG, "frag attach: (class: ${fragment.javaClass}, id: ${fragment.id}, tag: ${fragment.tag}")

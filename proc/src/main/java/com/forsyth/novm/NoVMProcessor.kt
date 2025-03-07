@@ -12,7 +12,6 @@ import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
-import com.google.devtools.ksp.validate
 import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
@@ -29,28 +28,36 @@ import java.util.Locale
 
 const val COMPONENT_ACTIVITY_QUALIFIED_NAME = "androidx.activity.ComponentActivity"
 const val FRAGMENT_QUALIFIED_NAME = "androidx.fragment.app.Fragment"
+const val DEFAULT_PACKAGE_NAME = "com.forsyth.novm"
 
 class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : SymbolProcessor {
     var pass = 1
     override fun process(resolver: Resolver): List<KSAnnotated> {
-        val retainSymbols = resolver.getSymbolsWithAnnotation(Retain::class.qualifiedName!!, false).toList()
         // TODO get package, statesavingactivity name from ksp options
-        val isStateSavingActivityValid = resolver.getClassDeclarationByName("com.forsyth.novm.StateSavingActivity")?.validate() == true
-        val isStateSavingFragmentValid = resolver.getClassDeclarationByName("com.forsyth.novm.StateSavingFragment")?.validate() == true
+        val isStateSavingActivityWritten = resolver.getClassDeclarationByName("${DEFAULT_PACKAGE_NAME}.StateSavingActivity") != null
+        val isStateSavingFragmentWritten = resolver.getClassDeclarationByName("${DEFAULT_PACKAGE_NAME}.StateSavingFragment") != null
+        if (!isStateSavingActivityWritten) {
+            logger.warn("generating ssactivity, pass $pass")
+            generateStateSavingActivityFile(DEFAULT_PACKAGE_NAME).writeTo(codeGenerator, Dependencies(true))
+        }
+        if (!isStateSavingFragmentWritten) {
+            logger.warn("generating ssfragment, pass $pass")
+            generateStateSavingFragmentFile(DEFAULT_PACKAGE_NAME).writeTo(codeGenerator, Dependencies(true))
+        }
+        val retainSymbols = resolver.getSymbolsWithAnnotation(Retain::class.qualifiedName!!, false).toList()
         val recheck = mutableListOf<KSAnnotated>()
         val componentToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>> = mutableMapOf()
         ensureSupported(
             retainSymbols,
-            isStateSavingActivityValid,
-            isStateSavingFragmentValid,
+            isStateSavingActivityWritten,
+            isStateSavingFragmentWritten,
             recheck,
             componentToStateMap
         )
-        if (componentToStateMap.isNotEmpty() && !isStateSavingActivityValid) {
-            generateCode(resolver, componentToStateMap)
+        if (componentToStateMap.isNotEmpty() && isStateSavingActivityWritten) {
+            generateDynamicCode(resolver, componentToStateMap)
         }
-        //logger.warn("pass: $pass")
-        //logger.warn("sizeof revalidate list: ${recheck.size}")
+        logger.warn("sizeof recheck: ${recheck.size}, pass: $pass")
         pass += 1
         return recheck
     }
@@ -60,6 +67,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                                 isStateSavingFragmentValid: Boolean,
                                 recheck: MutableList<KSAnnotated>,
                                 componentToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>>) {
+        logger.warn("ensureSupported#pass: $pass")
         retainSymbols.forEach { retainNode: KSAnnotated ->
             val propertyDecl = retainNode as? KSPropertyDeclaration
             if (propertyDecl == null) {
@@ -76,8 +84,11 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                 logger.error("@State must be declared within a ComponentActivity or Fragment, skipping ${propertyDecl.simpleName}")
                 return@forEach
             }
+            logger.warn("ensureSupported#classDecl: ${parentClassDecl.qualifiedName!!.asString()}")
             val isSubclassOfComponentActivity = isSubclassOf(parentClassDecl, COMPONENT_ACTIVITY_QUALIFIED_NAME)
             val isSubclassOfFragment = isSubclassOf(parentClassDecl, FRAGMENT_QUALIFIED_NAME)
+            logger.warn("ensureSupported#isSubAct?: $isSubclassOfComponentActivity")
+            logger.warn("ensureSupported#isSubFrag?: $isSubclassOfFragment")
             if (!isSubclassOfComponentActivity && !isSubclassOfFragment) {
                 if (!isStateSavingActivityValid || !isStateSavingFragmentValid) {
                     // ALL generated StateSavingX must be generated before we can make a determination here
@@ -100,9 +111,14 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
         }
     }
 
-    private fun generateCode(resolver: Resolver, componentToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>>) {
-        val componentContainingFiles = componentToStateMap.keys.mapNotNull { activityFullyQualified ->
-            resolver.getClassDeclarationByName(activityFullyQualified)?.containingFile
+    private fun generateStaticCode(packageName: String) {
+        generateStateSavingActivityFile(packageName).writeTo(codeGenerator, Dependencies(true))
+        generateStateSavingFragmentFile(packageName).writeTo(codeGenerator, Dependencies(true))
+    }
+
+    private fun generateDynamicCode(resolver: Resolver, componentToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>>) {
+        val componentContainingFiles = componentToStateMap.keys.mapNotNull { componentFullyQualified ->
+            resolver.getClassDeclarationByName(componentFullyQualified)?.containingFile
         }
         val noVMDynamicFileName = "NoVMDynamic"
         val packageName = resolver.getClassDeclarationByName(componentToStateMap.keys.first())!!.packageName.asString() // TODO improve, get app package name from ksp options
@@ -155,9 +171,6 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
             )
             .build()
             .writeTo(codeGenerator, Dependencies(true, *componentContainingFiles.toTypedArray()))
-
-        generateStateSavingActivityFile(packageName).writeTo(codeGenerator, Dependencies(true))
-        generateStateSavingFragmentFile(packageName).writeTo(codeGenerator, Dependencies(true))
     }
 
     private fun generateStateSavingFragmentFile(packageName: String) : FileSpec {
@@ -375,7 +388,19 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
         val funBuilder = generateSaveStateBundleSignature()
             .addModifiers(KModifier.OVERRIDE)
             .beginControlFlow("when (component) {")
-        componentToStateMap.forEach { activityToStateEntry ->
+        val activitiesToStates = componentToStateMap.filter { entry ->
+            val classDecl = resolver.getClassDeclarationByName(entry.key)!!
+            val isSub = isSubclassOf(classDecl, COMPONENT_ACTIVITY_QUALIFIED_NAME)
+            return@filter isSub
+        }
+        val fragmentsToStates = componentToStateMap.filter { entry ->
+            val classDecl = resolver.getClassDeclarationByName(entry.key)!!
+            return@filter isSubclassOf(classDecl, FRAGMENT_QUALIFIED_NAME)
+        }
+
+        funBuilder.beginControlFlow("is $COMPONENT_ACTIVITY_QUALIFIED_NAME -> {")
+        funBuilder.beginControlFlow("when (component) {")
+        activitiesToStates.forEach { activityToStateEntry ->
             funBuilder.beginControlFlow("is ${activityToStateEntry.key} -> {")
             activityToStateEntry.value
                 .filter { ksPropertyDeclaration ->
@@ -392,9 +417,44 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                     bundleKeyValuePairs[kvp.first] = kvp.second
                     funBuilder.addStatement("bundle.put${bundleFunPostfixRet.postfix}(${kvp.first}, component.${ksPropertyDeclaration.simpleName.asString()})")
             }
-            funBuilder.endControlFlow() // close is
+            funBuilder.endControlFlow() // close is (specific activity)
         }
-        funBuilder.endControlFlow() // close when
+        funBuilder.endControlFlow() // close is (component activity)
+        funBuilder.endControlFlow() // close when inner
+        funBuilder.beginControlFlow("is $FRAGMENT_QUALIFIED_NAME-> {")
+        funBuilder.beginControlFlow("when (component) {")
+        fragmentsToStates.forEach { fragmentToStateEntry ->
+            funBuilder.beginControlFlow("is ${fragmentToStateEntry.key} -> {")
+            // for each fragment, there are 3 classes of bundle
+            /*
+            // 1) kt_:fragmentName_:tag_b <-- tag
+            // 2) kc_:fragmentName_:containerId_b <-- containerId
+            // 3) kl_:fragmentName_b <-- class
+
+            Two of these are determined at runtime -- only the class variant is predetermined
+             */
+            val suffix = "${resolver.getClassDeclarationByName(fragmentToStateEntry.key)!!.simpleName.asString()}_b"
+            bundleKeyValuePairs["kl_$suffix"] = suffix
+            fragmentToStateEntry.value
+                .filter { ksPropertyDeclaration ->
+                    ksPropertyDeclaration.getAnnotationsByType(Retain::class).toList().first().across.contains(StateDestroyingEvent.PROCESS_DEATH)
+                }
+                .forEach filteredForEach@ { ksPropertyDeclaration ->
+                    val bundleFunPostfixRet = getBundleFunPostfix(resolver, ksPropertyDeclaration)
+                    if (bundleFunPostfixRet.category == BundleFunPostfixCategory.NOT_APPLICABLE) {
+                        logger.error("State ${ksPropertyDeclaration.simpleName.asString()} is marked to be retained across PROCESS_DEATH but is not a type supported by Bundle")
+                        return@filteredForEach
+                    }
+                    // TODO check bundlefunpostfix BEFORE codegen starts
+                    val kvp = generateBundleKeyValuePair(ksPropertyDeclaration)
+                    bundleKeyValuePairs[kvp.first] = kvp.second
+                    funBuilder.addStatement("bundle.put${bundleFunPostfixRet.postfix}(${kvp.first}, component.${ksPropertyDeclaration.simpleName.asString()})")
+                }
+            funBuilder.endControlFlow() // close is (specific fragment)
+        }
+        funBuilder.endControlFlow() // close is (fragment)
+        funBuilder.endControlFlow() // close when inner
+        funBuilder.endControlFlow() // close when outer
 
         return SSBRet(
             funSpec = funBuilder.build(),
@@ -477,7 +537,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
 
     private fun generateBundleKeyValuePair(ksPropertyDeclaration: KSPropertyDeclaration) : Pair<String, String> {
         val value = "${ksPropertyDeclaration.parentDeclaration!!.simpleName.asString()}_${ksPropertyDeclaration.simpleName.asString()}"
-        val key = "KEY_${value}"
+        val key = "k_${value}"
         return key to value
     }
 
@@ -617,8 +677,8 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                                                   componentToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>>) : MutableMap<String, TypeSpec> {
         val ret = mutableMapOf<String, TypeSpec>()
         componentToStateMap.forEach { entry ->
-            val activityName = resolver.getClassDeclarationByName(entry.key)!!.simpleName.asString()
-            val typeSpecBuilder = TypeSpec.classBuilder(activityName + "State") // TODO dangerous, check for collisions
+            val componentName = resolver.getClassDeclarationByName(entry.key)!!.simpleName.asString()
+            val typeSpecBuilder = TypeSpec.classBuilder(componentName + "State") // TODO dangerous, check for collisions
             entry.value.forEach { propDecl ->
                 val retainAnn = propDecl.getAnnotationsByType(Retain::class).toList().first()
                 // only put into the state holder if we're retaining across config change

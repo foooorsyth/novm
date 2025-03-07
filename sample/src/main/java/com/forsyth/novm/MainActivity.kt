@@ -59,11 +59,18 @@ class MainActivity : StateSavingActivity() {
             val fragment = owner as Fragment
             Log.d(TAG, "fraglistener onCreate: (class: ${fragment.javaClass}, id: ${fragment.id}, tag: ${fragment.tag}")
             Log.d(TAG, "fraglistener: isChangingConfig?: ${this@MainActivity.isChangingConfigurations}")
+            @Suppress("DEPRECATION")
+            (lastCustomNonConfigurationInstance as? StateHolder)?.let { retainedState ->
+                stateSaver.restoreStateConfigChange(this, retainedState)
+            }
         }
         override fun onDestroy(owner: LifecycleOwner) {
             val fragment = owner as Fragment
             Log.d(TAG, "fraglistener onDestroy: (class: ${fragment.javaClass}, id: ${fragment.id}, tag: ${fragment.tag}")
             Log.d(TAG, "fraglistener: isChangingConfig?: ${this@MainActivity.isChangingConfigurations}")
+            if (this@MainActivity.isChangingConfigurations) {
+                stateSaver.saveStateConfigChange(this)
+            }
             fragment.lifecycle.removeObserver(this)
         }
     }

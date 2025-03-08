@@ -467,6 +467,9 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
             funBuilder.endControlFlow() // close CONTAINER_ID
             funBuilder.beginControlFlow("FragmentIdentificationStrategy.TAG -> {")
             val tval = "\"t_${clsSimpleName}_\${component.tag}\""
+            funBuilder.beginControlFlow("if (component.tag == null) {")
+            funBuilder.addStatement("throw RuntimeException(\"identificationStrategy for instance of Fragment \${component::class.java.simpleName} is TAG but fragment.tag is null\")")
+            funBuilder.endControlFlow() // close if
             funBuilder.addStatement("bundle.putBundle($tval, fragBundle)")
             funBuilder.endControlFlow() // close TAG
             funBuilder.beginControlFlow("FragmentIdentificationStrategy.CLASS -> {")

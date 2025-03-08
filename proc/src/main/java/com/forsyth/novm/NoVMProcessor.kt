@@ -29,13 +29,15 @@ import java.util.Locale
 const val COMPONENT_ACTIVITY_QUALIFIED_NAME = "androidx.activity.ComponentActivity"
 const val FRAGMENT_QUALIFIED_NAME = "androidx.fragment.app.Fragment"
 const val DEFAULT_PACKAGE_NAME = "com.forsyth.novm"
+const val DEFAULT_STATE_SAVING_ACTIVITY_SIMPLE_NAME = "StateSavingActivity"
+const val DEFAULT_STATE_SAVING_FRAGMENT_SIMPLE_NAME = "StateSavingFragment"
 
 class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : SymbolProcessor {
     var pass = 1
     override fun process(resolver: Resolver): List<KSAnnotated> {
         // TODO get package, statesavingactivity name from ksp options
-        val isStateSavingActivityWritten = resolver.getClassDeclarationByName("${DEFAULT_PACKAGE_NAME}.StateSavingActivity") != null
-        val isStateSavingFragmentWritten = resolver.getClassDeclarationByName("${DEFAULT_PACKAGE_NAME}.StateSavingFragment") != null
+        val isStateSavingActivityWritten = resolver.getClassDeclarationByName("${DEFAULT_PACKAGE_NAME}.$DEFAULT_STATE_SAVING_ACTIVITY_SIMPLE_NAME") != null
+        val isStateSavingFragmentWritten = resolver.getClassDeclarationByName("${DEFAULT_PACKAGE_NAME}.$DEFAULT_STATE_SAVING_FRAGMENT_SIMPLE_NAME") != null
         if (!isStateSavingActivityWritten) {
             logger.warn("generating ssactivity, pass $pass")
             generateStateSavingActivityFile(DEFAULT_PACKAGE_NAME).writeTo(codeGenerator, Dependencies(true))
@@ -395,7 +397,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
         }
         val fragmentsToStates = componentToStateMap.filter { entry ->
             val classDecl = resolver.getClassDeclarationByName(entry.key)!!
-            return@filter isSubclassOf(classDecl, FRAGMENT_QUALIFIED_NAME)
+            return@filter isSubclassOf(classDecl, "$DEFAULT_PACKAGE_NAME.$DEFAULT_STATE_SAVING_FRAGMENT_SIMPLE_NAME")
         }
 
         funBuilder.beginControlFlow("is $COMPONENT_ACTIVITY_QUALIFIED_NAME -> {")
@@ -421,20 +423,11 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
         }
         funBuilder.endControlFlow() // close is (component activity)
         funBuilder.endControlFlow() // close when inner
-        funBuilder.beginControlFlow("is $FRAGMENT_QUALIFIED_NAME-> {")
+        funBuilder.beginControlFlow("is $DEFAULT_PACKAGE_NAME.$DEFAULT_STATE_SAVING_FRAGMENT_SIMPLE_NAME -> {")
         funBuilder.beginControlFlow("when (component) {")
         fragmentsToStates.forEach { fragmentToStateEntry ->
             funBuilder.beginControlFlow("is ${fragmentToStateEntry.key} -> {")
-            // for each fragment, there are 3 classes of bundle
-            /*
-            // 1) kt_:fragmentName_:tag_b <-- tag
-            // 2) kc_:fragmentName_:containerId_b <-- containerId
-            // 3) kl_:fragmentName_b <-- class
-
-            Two of these are determined at runtime -- only the class variant is predetermined
-             */
-            val suffix = "${resolver.getClassDeclarationByName(fragmentToStateEntry.key)!!.simpleName.asString()}_b"
-            bundleKeyValuePairs["kl_$suffix"] = suffix
+            funBuilder.addStatement("val fragBundle = Bundle()")
             fragmentToStateEntry.value
                 .filter { ksPropertyDeclaration ->
                     ksPropertyDeclaration.getAnnotationsByType(Retain::class).toList().first().across.contains(StateDestroyingEvent.PROCESS_DEATH)
@@ -448,14 +441,26 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                     // TODO check bundlefunpostfix BEFORE codegen starts
                     val kvp = generateBundleKeyValuePair(ksPropertyDeclaration)
                     bundleKeyValuePairs[kvp.first] = kvp.second
-                    funBuilder.addStatement("bundle.put${bundleFunPostfixRet.postfix}(${kvp.first}, component.${ksPropertyDeclaration.simpleName.asString()})")
+                    funBuilder.addStatement("fragBundle.put${bundleFunPostfixRet.postfix}(${kvp.first}, component.${ksPropertyDeclaration.simpleName.asString()})")
                 }
-            funBuilder.endControlFlow() // close is (specific fragment)
+            // for each fragment, there are 3 classes of bundle
+            /*
+            // 1) kt_:fragmentName_:tag <-- tag
+            // 2) ki_:fragmentName_:containerId <-- containerId
+            // 3) kl_:fragmentName <-- class
+
+            Two of these are determined at runtime -- only the class variant is predetermined
+             */
+            // TODO break this out into its own function for rsb
+            val suffix = "${resolver.getClassDeclarationByName(fragmentToStateEntry.key)!!.simpleName.asString()}"
+            bundleKeyValuePairs["kl_$suffix"] = "l_$suffix"
+            funBuilder.addStatement("bundle.putBundle(kl_$suffix, fragBundle)")
+            funBuilder.endControlFlow() // close is (specific fragment)a
         }
         funBuilder.endControlFlow() // close is (fragment)
         funBuilder.endControlFlow() // close when inner
-        funBuilder.endControlFlow() // close when outer
 
+        funBuilder.endControlFlow() // close when outer
         return SSBRet(
             funSpec = funBuilder.build(),
             bundleKeyValuePairs = bundleKeyValuePairs

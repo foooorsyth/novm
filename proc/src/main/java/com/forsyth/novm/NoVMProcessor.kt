@@ -452,10 +452,28 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
             Two of these are determined at runtime -- only the class variant is predetermined
              */
             // TODO break this out into its own function for rsb
-            val suffix = "${resolver.getClassDeclarationByName(fragmentToStateEntry.key)!!.simpleName.asString()}"
-            bundleKeyValuePairs["kl_$suffix"] = "l_$suffix"
-            funBuilder.addStatement("bundle.putBundle(kl_$suffix, fragBundle)")
-            funBuilder.endControlFlow() // close is (specific fragment)a
+            val clsSimpleName = resolver.getClassDeclarationByName(fragmentToStateEntry.key)!!.simpleName.asString()
+            // CLASS
+            bundleKeyValuePairs["kl_$clsSimpleName"] = "l_$clsSimpleName"
+
+
+            funBuilder.beginControlFlow("when (component.identificationStrategy) {")
+            funBuilder.beginControlFlow("FragmentIdentificationStrategy.CONTAINER_ID -> {")
+            // CONTAINER_ID
+            // container id key/value is fully dynamic and not placed into companion object keys
+            // as such, we only need the value, not the key name
+            val ival = "\"i_${clsSimpleName}_\${component.id}\""
+            funBuilder.addStatement("bundle.putBundle($ival, fragBundle)")
+            funBuilder.endControlFlow() // close CONTAINER_ID
+            funBuilder.beginControlFlow("FragmentIdentificationStrategy.TAG -> {")
+            val tval = "\"t_${clsSimpleName}_\${component.tag}\""
+            funBuilder.addStatement("bundle.putBundle($tval, fragBundle)")
+            funBuilder.endControlFlow() // close TAG
+            funBuilder.beginControlFlow("FragmentIdentificationStrategy.CLASS -> {")
+            funBuilder.addStatement("bundle.putBundle(kl_$clsSimpleName, fragBundle)")
+            funBuilder.endControlFlow() // close CLASS
+            funBuilder.endControlFlow() // close when (id strat switch)
+            funBuilder.endControlFlow() // close is (specific fragment)
         }
         funBuilder.endControlFlow() // close is (fragment)
         funBuilder.endControlFlow() // close when inner

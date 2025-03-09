@@ -443,34 +443,21 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                     bundleKeyValuePairs[kvp.first] = kvp.second
                     funBuilder.addStatement("fragBundle.put${bundleFunPostfixRet.postfix}(${kvp.first}, component.${ksPropertyDeclaration.simpleName.asString()})")
                 }
-            // for each fragment, there are 3 classes of bundle
-            /*
-            // 1) kt_:fragmentName_:tag <-- tag
-            // 2) ki_:fragmentName_:containerId <-- containerId
-            // 3) kl_:fragmentName <-- class
 
-            Two of these are determined at runtime -- only the class variant is predetermined
-             */
             // TODO break this out into its own function for rsb
             val clsSimpleName = resolver.getClassDeclarationByName(fragmentToStateEntry.key)!!.simpleName.asString()
             // CLASS
-            bundleKeyValuePairs["kl_$clsSimpleName"] = "l_$clsSimpleName"
-
-
+            val lKvp = generateBundleFragmentKeyValuePairForClass(clsSimpleName)
+            bundleKeyValuePairs[lKvp.first] = lKvp.second
             funBuilder.beginControlFlow("when (component.identificationStrategy) {")
-            funBuilder.beginControlFlow("FragmentIdentificationStrategy.CONTAINER_ID -> {")
-            // CONTAINER_ID
-            // container id key/value is fully dynamic and not placed into companion object keys
-            // as such, we only need the value, not the key name
-            val ival = "\"i_${clsSimpleName}_\${component.id}\""
-            funBuilder.addStatement("bundle.putBundle($ival, fragBundle)")
+            funBuilder.beginControlFlow("FragmentIdentificationStrategy.ID -> {")
+            funBuilder.addStatement("bundle.putBundle(${generateBundleFragmentKeyStringForId(clsSimpleName)}, fragBundle)")
             funBuilder.endControlFlow() // close CONTAINER_ID
             funBuilder.beginControlFlow("FragmentIdentificationStrategy.TAG -> {")
-            val tval = "\"t_${clsSimpleName}_\${component.tag}\""
             funBuilder.beginControlFlow("if (component.tag == null) {")
             funBuilder.addStatement("throw RuntimeException(\"identificationStrategy for instance of Fragment \${component::class.java.simpleName} is TAG but fragment.tag is null\")")
             funBuilder.endControlFlow() // close if
-            funBuilder.addStatement("bundle.putBundle($tval, fragBundle)")
+            funBuilder.addStatement("bundle.putBundle(${generateBundleFragmentKeyStringForTag(clsSimpleName)}, fragBundle)")
             funBuilder.endControlFlow() // close TAG
             funBuilder.beginControlFlow("FragmentIdentificationStrategy.CLASS -> {")
             funBuilder.addStatement("bundle.putBundle(kl_$clsSimpleName, fragBundle)")
@@ -480,7 +467,6 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
         }
         funBuilder.endControlFlow() // close is (fragment)
         funBuilder.endControlFlow() // close when inner
-
         funBuilder.endControlFlow() // close when outer
         return SSBRet(
             funSpec = funBuilder.build(),
@@ -515,7 +501,14 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
         val funBuilder = generateRestoreStateBundleSignature()
             .addModifiers(KModifier.OVERRIDE)
             .beginControlFlow("when (component) {")
-        componentToStateMap.forEach { activityToStateEntry ->
+        val activitiesToStates = componentToStateMap.filter { entry ->
+            val classDecl = resolver.getClassDeclarationByName(entry.key)!!
+            return@filter isSubclassOf(classDecl, COMPONENT_ACTIVITY_QUALIFIED_NAME)
+        }
+
+        funBuilder.beginControlFlow("is $COMPONENT_ACTIVITY_QUALIFIED_NAME -> {")
+        funBuilder.beginControlFlow("when (component) {")
+        activitiesToStates.forEach { activityToStateEntry ->
             funBuilder.beginControlFlow("is ${activityToStateEntry.key} -> {")
             activityToStateEntry.value
                 .filter { ksPropertyDeclaration ->
@@ -555,10 +548,97 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                     }
 
                 }
-            funBuilder.endControlFlow() // close is
+            funBuilder.endControlFlow() // close is (specific activity)
         }
-        funBuilder.endControlFlow() // close when
+        funBuilder.endControlFlow() // close when inner
+        funBuilder.endControlFlow() // close is (component activity)
+
+        funBuilder.beginControlFlow("is $DEFAULT_PACKAGE_NAME.$DEFAULT_STATE_SAVING_FRAGMENT_SIMPLE_NAME-> {")
+        funBuilder.beginControlFlow("when (component) {")
+        val fragmentsToStates = componentToStateMap.filter { entry ->
+            val classDecl = resolver.getClassDeclarationByName(entry.key)!!
+            return@filter isSubclassOf(classDecl, "$DEFAULT_PACKAGE_NAME.$DEFAULT_STATE_SAVING_FRAGMENT_SIMPLE_NAME")
+        }
+        fragmentsToStates.forEach { fragmentToStateEntry ->
+            val clsSimpleName = resolver.getClassDeclarationByName(fragmentToStateEntry.key)!!.simpleName.asString()
+            funBuilder.beginControlFlow("is ${fragmentToStateEntry.key} -> {")
+            funBuilder.beginControlFlow("val fragBundleKey = when (component.identificationStrategy) {")
+            funBuilder.beginControlFlow("FragmentIdentificationStrategy.TAG -> {")
+            funBuilder.addStatement(generateBundleFragmentKeyStringForTag(clsSimpleName))
+            funBuilder.endControlFlow()
+            funBuilder.beginControlFlow("FragmentIdentificationStrategy.ID -> {")
+            funBuilder.addStatement(generateBundleFragmentKeyStringForId(clsSimpleName))
+            funBuilder.endControlFlow()
+            funBuilder.beginControlFlow("FragmentIdentificationStrategy.CLASS -> {")
+            funBuilder.addStatement("\"${generateBundleFragmentKeyValuePairForClass(clsSimpleName).first}\"")
+            funBuilder.endControlFlow()
+            funBuilder.endControlFlow() // close when (id strat for bundle key)
+            funBuilder.addStatement("val fragBundle = bundle.getBundle(fragBundleKey)")
+            funBuilder.beginControlFlow("if (fragBundle == null) {")
+            funBuilder.addStatement("return")
+            funBuilder.endControlFlow()
+            fragmentToStateEntry.value
+                .filter { ksPropertyDeclaration ->
+                    ksPropertyDeclaration.getAnnotationsByType(Retain::class).toList().first().across.contains(StateDestroyingEvent.PROCESS_DEATH)
+                }
+                .forEach filteredForEach@ { ksPropertyDeclaration ->
+                    val resolvedType = ksPropertyDeclaration.type.resolve()
+                    val key = generateBundleKeyValuePair(ksPropertyDeclaration).first
+                    val bundleFunPostfixRet = getBundleFunPostfix(resolver, resolvedType)
+
+                    when (bundleFunPostfixRet.category) {
+                        BundleFunPostfixCategory.NON_NULL_PRIMITIVE -> {
+                            // primitives always have default value
+                            funBuilder.addStatement("component.${ksPropertyDeclaration.simpleName.asString()} = fragBundle.get${bundleFunPostfixRet.postfix}($key)")
+                            return@filteredForEach
+                        }
+                        BundleFunPostfixCategory.NULLABLE_KNOWN_TYPE -> {
+                            if (resolvedType.isMarkedNullable) {
+                                funBuilder.addStatement("component.${ksPropertyDeclaration.simpleName.asString()} = fragBundle.get${bundleFunPostfixRet.postfix}($key)")
+                            } else {
+                                funBuilder.addStatement("fragBundle.get${bundleFunPostfixRet.postfix}($key)?.let { component.${ksPropertyDeclaration.simpleName.asString()} = it }")
+                            }
+                            return@filteredForEach
+                        }
+                        BundleFunPostfixCategory.SUBCLASS_SERIALIZABLE_OR_PARCELABLE -> {
+                            if (resolvedType.isMarkedNullable) {
+                                funBuilder.addStatement("component.${ksPropertyDeclaration.simpleName.asString()} = fragBundle.get${bundleFunPostfixRet.postfix}($key, ${resolvedType.makeNotNullable().toClassName()}::class.java)")
+                            } else {
+                                funBuilder.addStatement("fragBundle.get${bundleFunPostfixRet.postfix}($key, ${resolvedType.toClassName()}::class.java)?.let { component.${ksPropertyDeclaration.simpleName.asString()} = it }")
+                            }
+                            return@filteredForEach
+                        }
+                        BundleFunPostfixCategory.NOT_APPLICABLE -> {
+                            logger.error("State ${ksPropertyDeclaration.simpleName.asString()} is marked to be retained across PROCESS_DEATH but is not a type supported by Bundle")
+                            return@filteredForEach
+                        }
+                    }
+
+                }
+            funBuilder.endControlFlow() // close is (specific fragment)
+        }
+        funBuilder.endControlFlow() // close when inner
+        funBuilder.endControlFlow() // close is (fragment))
+        funBuilder.endControlFlow() // close when outer
         return funBuilder.build()
+    }
+
+    // for each fragment, there are 3 classes of bundle
+    /*
+    // 1) kt_:fragmentName_:tag <-- tag
+    // 2) ki_:fragmentName_:containerId <-- containerId
+    // 3) kl_:fragmentName <-- class
+
+    Two of these are determined at runtime -- only the class variant is predetermined
+     */
+    private fun generateBundleFragmentKeyValuePairForClass(clsSimpleName: String) : Pair<String, String>{
+       return "kl_$clsSimpleName" to "l_$clsSimpleName"
+    }
+    private fun generateBundleFragmentKeyStringForId(clsSimpleName: String) : String {
+        return "\"i_${clsSimpleName}_\${component.id}\""
+    }
+    private fun generateBundleFragmentKeyStringForTag(clsSimpleName: String) : String {
+        return "\"t_${clsSimpleName}_\${component.tag}\""
     }
 
     private fun generateBundleKeyValuePair(ksPropertyDeclaration: KSPropertyDeclaration) : Pair<String, String> {

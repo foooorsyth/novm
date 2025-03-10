@@ -570,7 +570,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
             funBuilder.addStatement(generateBundleFragmentKeyStringForId(clsSimpleName))
             funBuilder.endControlFlow()
             funBuilder.beginControlFlow("FragmentIdentificationStrategy.CLASS -> {")
-            funBuilder.addStatement("\"${generateBundleFragmentKeyValuePairForClass(clsSimpleName).first}\"")
+            funBuilder.addStatement("\"${generateBundleFragmentKeyValuePairForClass(clsSimpleName).second}\"")
             funBuilder.endControlFlow()
             funBuilder.endControlFlow() // close when (id strat for bundle key)
             funBuilder.addStatement("val fragBundle = bundle.getBundle(fragBundleKey)")

@@ -16,11 +16,14 @@ import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
+import com.squareup.kotlinpoet.INT
 import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.ParameterSpec
+import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.TypeVariableName
+import com.squareup.kotlinpoet.asClassName
 import com.squareup.kotlinpoet.ksp.toClassName
 import com.squareup.kotlinpoet.ksp.toTypeName
 import com.squareup.kotlinpoet.ksp.writeTo
@@ -766,10 +769,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
         val builder = TypeSpec.classBuilder("StateHolder")
         componentToStateMap.forEach { componentEntry ->
             val firstUpper = componentEntry.key.indexOfFirst { it.isUpperCase() }
-            val simpleNameComponent = componentEntry.key.substring(firstUpper)
-            logger.warn(simpleNameComponent)
-            logger.warn(stateHoldersForComponents.keys.first())
-            val stateHolderEntry = stateHoldersForComponents.entries.first { it.key == simpleNameComponent + "StateHolder" }
+            val stateHolderEntry = stateHoldersForComponents.entries.first { it.key == componentEntry.key }
             val classDecl = resolver.getClassDeclarationByName(componentEntry.key)!!
             if (isSubclassOf(classDecl, COMPONENT_ACTIVITY_QUALIFIED_NAME)) {
                 builder.addProperty(
@@ -782,30 +782,29 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                         .build()
                 )
             } else if (isSubclassOf(classDecl, "$packageName.$DEFAULT_STATE_SAVING_FRAGMENT_SIMPLE_NAME")) {
-//                builder.addProperty(
-//                    PropertySpec.builder(
-//                        "${lowercaseFirstLetter(componentEntry.value.name!!)}ByClass",
-//                        ClassName(packageName, componentEntry.value.name!!).copy(nullable = true)
-//                    )
-//                        .mutable(true)
-//                        .initializer("%L", null)
-//                        .build()
-//                )
-//                builder.addProperty(
-//                    PropertySpec.builder(
-//                        "${lowercaseFirstLetter(componentEntry.value.name!!)}ById",
-//                        ClassName("kotlin.collections", "MutableMap")
-//                    )
-//                        .addTypeVariable(
-//                            TypeVariableName("String")
-//                        )
-//                        .addTypeVariable(
-//                            TypeVariableName(stateHolderEntry.key.name)
-//                        )
-//                        .mutable(true)
-//                        .initializer("%L", "mutableMapOf()")
-//                        .build()
-//                )
+                builder.addProperty(
+                    PropertySpec.builder(
+                        "${lowercaseFirstLetter(stateHolderEntry.value.name!!)}ByClass",
+                        ClassName(packageName, stateHolderEntry.value.name!!).copy(nullable = true)
+                    )
+                        .mutable(true)
+                        .initializer("%L", null)
+                        .build()
+                )
+                val mutableMapIntToHolder = MutableMap::class.asClassName()
+                    .parameterizedBy(
+                        INT,
+                        ClassName(packageName, stateHolderEntry.key + "State")
+                    )
+                builder.addProperty(
+                    PropertySpec.builder(
+                        "${lowercaseFirstLetter(stateHolderEntry.value.name!!)}ById",
+                        mutableMapIntToHolder
+                    )
+                        .mutable(true)
+                        .initializer("%L", "mutableMapOf()")
+                        .build()
+                )
             }
         }
         return builder.build()

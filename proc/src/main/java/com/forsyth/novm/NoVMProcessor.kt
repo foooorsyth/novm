@@ -20,6 +20,7 @@ import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.TypeSpec
+import com.squareup.kotlinpoet.TypeVariableName
 import com.squareup.kotlinpoet.ksp.toClassName
 import com.squareup.kotlinpoet.ksp.toTypeName
 import com.squareup.kotlinpoet.ksp.writeTo
@@ -125,7 +126,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
         val noVMDynamicFileName = "NoVMDynamic"
         val packageName = resolver.getClassDeclarationByName(componentToStateMap.keys.first())!!.packageName.asString() // TODO improve, get app package name from ksp options
         val stateHoldersForComponents = generateStateHoldersForComponents(resolver, componentToStateMap)
-        val topLevelStateHolder = generateTopLevelStateHolder(packageName, stateHoldersForComponents)
+        val topLevelStateHolder = generateTopLevelStateHolder(packageName, resolver, componentToStateMap, stateHoldersForComponents)
         val stateSaver = generateStateSaver(packageName,
             resolver,
             componentToStateMap,
@@ -759,19 +760,53 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
         return funBuilder.build()
     }
 
-    private fun generateTopLevelStateHolder(packageName: String, stateHoldersForComponents: MutableMap<String, TypeSpec>) : TypeSpec {
+    private fun generateTopLevelStateHolder(packageName: String, resolver: Resolver,
+                                            componentToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>>,
+                                            stateHoldersForComponents: MutableMap<String, TypeSpec>) : TypeSpec {
         val builder = TypeSpec.classBuilder("StateHolder")
-        stateHoldersForComponents.forEach { entry ->
-            builder.addProperty(
-                PropertySpec.builder(
-                    lowercaseFirstLetter(entry.value.name!!),
-                    ClassName(packageName, entry.value.name!!).copy(nullable = true)
+        componentToStateMap.forEach { componentEntry ->
+            val firstUpper = componentEntry.key.indexOfFirst { it.isUpperCase() }
+            val simpleNameComponent = componentEntry.key.substring(firstUpper)
+            logger.warn(simpleNameComponent)
+            logger.warn(stateHoldersForComponents.keys.first())
+            val stateHolderEntry = stateHoldersForComponents.entries.first { it.key == simpleNameComponent + "StateHolder" }
+            val classDecl = resolver.getClassDeclarationByName(componentEntry.key)!!
+            if (isSubclassOf(classDecl, COMPONENT_ACTIVITY_QUALIFIED_NAME)) {
+                builder.addProperty(
+                    PropertySpec.builder(
+                        lowercaseFirstLetter(stateHolderEntry.value.name!!),
+                        ClassName(packageName, stateHolderEntry.value.name!!).copy(nullable = true)
+                    )
+                        .mutable(true)
+                        .initializer("%L", null)
+                        .build()
                 )
-                    .mutable(true)
-                    .initializer("%L", null)
-                    .build()
-            )
-
+            } else if (isSubclassOf(classDecl, "$packageName.$DEFAULT_STATE_SAVING_FRAGMENT_SIMPLE_NAME")) {
+//                builder.addProperty(
+//                    PropertySpec.builder(
+//                        "${lowercaseFirstLetter(componentEntry.value.name!!)}ByClass",
+//                        ClassName(packageName, componentEntry.value.name!!).copy(nullable = true)
+//                    )
+//                        .mutable(true)
+//                        .initializer("%L", null)
+//                        .build()
+//                )
+//                builder.addProperty(
+//                    PropertySpec.builder(
+//                        "${lowercaseFirstLetter(componentEntry.value.name!!)}ById",
+//                        ClassName("kotlin.collections", "MutableMap")
+//                    )
+//                        .addTypeVariable(
+//                            TypeVariableName("String")
+//                        )
+//                        .addTypeVariable(
+//                            TypeVariableName(stateHolderEntry.key.name)
+//                        )
+//                        .mutable(true)
+//                        .initializer("%L", "mutableMapOf()")
+//                        .build()
+//                )
+            }
         }
         return builder.build()
     }

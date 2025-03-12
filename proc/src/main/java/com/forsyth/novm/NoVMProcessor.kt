@@ -21,8 +21,8 @@ import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.PropertySpec
+import com.squareup.kotlinpoet.STRING
 import com.squareup.kotlinpoet.TypeSpec
-import com.squareup.kotlinpoet.TypeVariableName
 import com.squareup.kotlinpoet.asClassName
 import com.squareup.kotlinpoet.ksp.toClassName
 import com.squareup.kotlinpoet.ksp.toTypeName
@@ -796,10 +796,24 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                         INT,
                         ClassName(packageName, stateHolderEntry.key + "State")
                     )
+                val mutableMapStringToHolder = MutableMap::class.asClassName()
+                    .parameterizedBy(
+                        STRING,
+                        ClassName(packageName, stateHolderEntry.key + "State")
+                    )
                 builder.addProperty(
                     PropertySpec.builder(
                         "${lowercaseFirstLetter(stateHolderEntry.value.name!!)}ById",
                         mutableMapIntToHolder
+                    )
+                        .mutable(true)
+                        .initializer("%L", "mutableMapOf()")
+                        .build()
+                )
+                builder.addProperty(
+                    PropertySpec.builder(
+                        "${lowercaseFirstLetter(stateHolderEntry.value.name!!)}ByTag",
+                       mutableMapStringToHolder
                     )
                         .mutable(true)
                         .initializer("%L", "mutableMapOf()")

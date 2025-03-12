@@ -24,7 +24,6 @@ import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.STRING
 import com.squareup.kotlinpoet.TypeSpec
-import com.squareup.kotlinpoet.asClassName
 import com.squareup.kotlinpoet.ksp.toClassName
 import com.squareup.kotlinpoet.ksp.toTypeName
 import com.squareup.kotlinpoet.ksp.writeTo
@@ -682,9 +681,17 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
         val funBuilder = generateRestoreStateConfigChangeSignature(packageName)
             .addModifiers(KModifier.OVERRIDE)
             .beginControlFlow("when (component) {")
-
-
-        componentToStateMap.forEach { activityToStateEntry ->
+        val activitiesToStates = componentToStateMap.filter { entry ->
+            val classDecl = resolver.getClassDeclarationByName(entry.key)!!
+            return@filter isSubclassOf(classDecl, COMPONENT_ACTIVITY_QUALIFIED_NAME)
+        }
+        val fragmentsToStates = componentToStateMap.filter { entry ->
+            val classDecl = resolver.getClassDeclarationByName(entry.key)!!
+            return@filter isSubclassOf(classDecl, "$DEFAULT_PACKAGE_NAME.$DEFAULT_STATE_SAVING_FRAGMENT_SIMPLE_NAME")
+        }
+        funBuilder.beginControlFlow("is $COMPONENT_ACTIVITY_QUALIFIED_NAME -> {")
+        funBuilder.beginControlFlow("when (component) {")
+        activitiesToStates.forEach { activityToStateEntry ->
             val classDeclOfActivity = resolver.getClassDeclarationByName(activityToStateEntry.key)!!
             funBuilder.beginControlFlow("is ${activityToStateEntry.key} -> {")
             val activityStateHolderFieldName = "${lowercaseFirstLetter(classDeclOfActivity.simpleName.asString())}State"
@@ -709,7 +716,63 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
             funBuilder.endControlFlow() // close if
             funBuilder.endControlFlow() // close is
         }
-        funBuilder.endControlFlow() // close when
+        funBuilder.endControlFlow() // close is (component activity)
+        funBuilder.endControlFlow() // close when inner
+        funBuilder.beginControlFlow("is $DEFAULT_PACKAGE_NAME.$DEFAULT_STATE_SAVING_FRAGMENT_SIMPLE_NAME -> {")
+        funBuilder.beginControlFlow("when (component) {")
+        fragmentsToStates.forEach { fragmentToStateEntry ->
+            val classDeclOfFrag = resolver.getClassDeclarationByName(fragmentToStateEntry.key)!!
+            val configChangeProps = fragmentToStateEntry.value.filter { ksPropertyDeclaration ->
+                ksPropertyDeclaration.getAnnotationsByType(Retain::class).toList().first().across.contains(StateDestroyingEvent.CONFIGURATION_CHANGE)
+            }
+            funBuilder.beginControlFlow("is ${fragmentToStateEntry.key} -> {")
+            funBuilder.beginControlFlow("val fragStateHolder = when(component.identificationStrategy) {")
+            funBuilder.beginControlFlow("FragmentIdentificationStrategy.CLASS -> {")
+            val fragStateHolderFieldNameForClass = "${lowercaseFirstLetter(classDeclOfFrag.simpleName.asString())}StateByClass"
+            funBuilder.addStatement(
+                "stateHolder.$fragStateHolderFieldNameForClass"
+            )
+            funBuilder.endControlFlow() // close is (CLASS)
+            funBuilder.beginControlFlow("FragmentIdentificationStrategy.TAG -> {")
+            val fragStateHolderFieldNameForTag = "${lowercaseFirstLetter(classDeclOfFrag.simpleName.asString())}StateByTag"
+            funBuilder.beginControlFlow("if (component.tag == null) {")
+            funBuilder.addStatement(
+                "throw RuntimeException(\"fragment of type " +
+                        "${classDeclOfFrag.qualifiedName!!.asString()} has identificationStrategy of TAG but fragment.tag is null\")")
+            funBuilder.endControlFlow()
+            funBuilder.addStatement(
+                "stateHolder.$fragStateHolderFieldNameForTag[component.tag!!]"
+            )
+            funBuilder.endControlFlow() // close is (TAG)
+            funBuilder.beginControlFlow("FragmentIdentificationStrategy.ID -> {")
+            val fragStateHolderFieldNameForId = "${lowercaseFirstLetter(classDeclOfFrag.simpleName.asString())}StateById"
+            funBuilder.addStatement(
+                "stateHolder.$fragStateHolderFieldNameForId[component.id]"
+            )
+            funBuilder.endControlFlow() // close is (ID)
+            funBuilder.endControlFlow() // close when (id strat)
+            funBuilder.beginControlFlow("if (fragStateHolder == null) {")
+            funBuilder.addStatement("return") // TODO logging
+            funBuilder.endControlFlow() // close if
+            configChangeProps.forEach { ksPropertyDeclaration ->
+                // need to find equivalent field in state holder for this activity
+                // need to check for null in stateholder prop
+                val typeSpecOfStateHolder = stateHoldersForComponents[fragmentToStateEntry.key]!!
+                val equivPropInStateHolder = typeSpecOfStateHolder.propertySpecs.first { it.name == ksPropertyDeclaration.simpleName.asString() }
+                if (equivPropInStateHolder.type.isNullable && !ksPropertyDeclaration.type.resolve().isMarkedNullable) {
+                    funBuilder.beginControlFlow("if (fragStateHolder.${ksPropertyDeclaration.simpleName.asString()} != null) {")
+                    funBuilder.addStatement("component.${ksPropertyDeclaration.simpleName.asString()} = fragStateHolder.${ksPropertyDeclaration.simpleName.asString()}!!")
+                    funBuilder.endControlFlow()
+                }
+                else {
+                    funBuilder.addStatement("component.${ksPropertyDeclaration.simpleName.asString()} = fragStateHolder.${ksPropertyDeclaration.simpleName.asString()}")
+                }
+            }
+            funBuilder.endControlFlow() // close is (specific fragment)
+        }
+        funBuilder.endControlFlow() // close is (fragment)
+        funBuilder.endControlFlow() // close when inner
+        funBuilder.endControlFlow() // close when outer
         return funBuilder.build()
     }
 
@@ -742,8 +805,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
 
         val activitiesToStates = componentToStateMap.filter { entry ->
             val classDecl = resolver.getClassDeclarationByName(entry.key)!!
-            val isSub = isSubclassOf(classDecl, COMPONENT_ACTIVITY_QUALIFIED_NAME)
-            return@filter isSub
+            return@filter isSubclassOf(classDecl, COMPONENT_ACTIVITY_QUALIFIED_NAME)
         }
         val fragmentsToStates = componentToStateMap.filter { entry ->
             val classDecl = resolver.getClassDeclarationByName(entry.key)!!

@@ -18,6 +18,7 @@ import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.INT
 import com.squareup.kotlinpoet.KModifier
+import com.squareup.kotlinpoet.MUTABLE_MAP
 import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.PropertySpec
@@ -739,14 +740,25 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
             .addStatement("val stateHolder = StateHolder()")
             .beginControlFlow("when (component) {")
 
-        componentToStateMap.forEach { entry ->
-            val classDeclOfActivity = resolver.getClassDeclarationByName(entry.key)!!
-            funBuilder.beginControlFlow("is ${entry.key} -> {")
+        val activitiesToStates = componentToStateMap.filter { entry ->
+            val classDecl = resolver.getClassDeclarationByName(entry.key)!!
+            val isSub = isSubclassOf(classDecl, COMPONENT_ACTIVITY_QUALIFIED_NAME)
+            return@filter isSub
+        }
+        val fragmentsToStates = componentToStateMap.filter { entry ->
+            val classDecl = resolver.getClassDeclarationByName(entry.key)!!
+            return@filter isSubclassOf(classDecl, "$DEFAULT_PACKAGE_NAME.$DEFAULT_STATE_SAVING_FRAGMENT_SIMPLE_NAME")
+        }
+        funBuilder.beginControlFlow("is $COMPONENT_ACTIVITY_QUALIFIED_NAME -> {")
+        funBuilder.beginControlFlow("when (component) {")
+        activitiesToStates.forEach { activityToStateEntry ->
+            val classDeclOfActivity = resolver.getClassDeclarationByName(activityToStateEntry.key)!!
+            funBuilder.beginControlFlow("is ${activityToStateEntry.key} -> {")
             val activityStateHolderFieldName = "${lowercaseFirstLetter(classDeclOfActivity.simpleName.asString())}State"
             funBuilder.addStatement(
                 "stateHolder.$activityStateHolderFieldName = ${classDeclOfActivity.simpleName.asString()}State()"
             )
-            entry.value.filter { ksPropertyDeclaration ->
+            activityToStateEntry.value.filter { ksPropertyDeclaration ->
                 ksPropertyDeclaration.getAnnotationsByType(Retain::class).toList().first().across.contains(StateDestroyingEvent.CONFIGURATION_CHANGE)
             }
             .forEach { propertyDecl ->
@@ -755,10 +767,69 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                     "stateHolder.$activityStateHolderFieldName!!.${propertyDecl.simpleName.asString()} = component.${propertyDecl.simpleName.asString()}"
                 )
             }
-            funBuilder.endControlFlow() // end is
+            funBuilder.endControlFlow() // end is (specific activity)
         }
+        funBuilder.endControlFlow() // close is (component activity)
+        funBuilder.endControlFlow() // close when inner
+        funBuilder.beginControlFlow("is $DEFAULT_PACKAGE_NAME.$DEFAULT_STATE_SAVING_FRAGMENT_SIMPLE_NAME -> {")
+        funBuilder.beginControlFlow("when (component) {")
+        fragmentsToStates.forEach { fragmentToStateEntry ->
+            val classDeclOfFrag = resolver.getClassDeclarationByName(fragmentToStateEntry.key)!!
+            val configChangeProps = fragmentToStateEntry.value.filter { ksPropertyDeclaration ->
+                ksPropertyDeclaration.getAnnotationsByType(Retain::class).toList().first().across.contains(StateDestroyingEvent.CONFIGURATION_CHANGE)
+            }
+            funBuilder.beginControlFlow("is ${fragmentToStateEntry.key} -> {")
+            funBuilder.beginControlFlow("when(component.identificationStrategy) {")
+            funBuilder.beginControlFlow("FragmentIdentificationStrategy.CLASS -> {")
+            val fragStateHolderFieldNameForClass = "${lowercaseFirstLetter(classDeclOfFrag.simpleName.asString())}StateByClass"
+            funBuilder.addStatement(
+                "stateHolder.$fragStateHolderFieldNameForClass = ${classDeclOfFrag.simpleName.asString()}State()"
+            )
+            configChangeProps.forEach { propertyDecl ->
+                // during save, nullability doesn't matter
+                funBuilder.addStatement(
+                    "stateHolder.$fragStateHolderFieldNameForClass!!.${propertyDecl.simpleName.asString()} = component.${propertyDecl.simpleName.asString()}"
+                )
+            }
+            funBuilder.endControlFlow() // close is (CLASS)
+            funBuilder.beginControlFlow("FragmentIdentificationStrategy.TAG -> {")
+            val fragStateHolderFieldNameForTag = "${lowercaseFirstLetter(classDeclOfFrag.simpleName.asString())}StateByTag"
+            funBuilder.beginControlFlow("if (component.tag == null) {")
+            funBuilder.addStatement(
+                "throw RuntimeException(\"fragment of type " +
+                        "${classDeclOfFrag.qualifiedName!!.asString()} has identificationStrategy of TAG but fragment.tag is null\")")
+            funBuilder.endControlFlow()
+            funBuilder.addStatement("val fragStateHolder = ${classDeclOfFrag.simpleName.asString()}State()")
+            configChangeProps.forEach { propertyDecl ->
+                // during save, nullability doesn't matter
+                funBuilder.addStatement(
+                    "fragStateHolder.${propertyDecl.simpleName.asString()} = component.${propertyDecl.simpleName.asString()}"
+                )
+            }
+            funBuilder.addStatement(
+                "stateHolder.$fragStateHolderFieldNameForTag[component.tag!!] = fragStateHolder"
+            )
+            funBuilder.endControlFlow() // close is (TAG)
+            funBuilder.beginControlFlow("FragmentIdentificationStrategy.ID -> {")
+            val fragStateHolderFieldNameForId = "${lowercaseFirstLetter(classDeclOfFrag.simpleName.asString())}StateById"
+            funBuilder.addStatement("val fragStateHolder = ${classDeclOfFrag.simpleName.asString()}State()")
+            configChangeProps.forEach { propertyDecl ->
+                // during save, nullability doesn't matter
+                funBuilder.addStatement(
+                    "fragStateHolder.${propertyDecl.simpleName.asString()} = component.${propertyDecl.simpleName.asString()}"
+                )
+            }
+            funBuilder.addStatement(
+                "stateHolder.$fragStateHolderFieldNameForId[component.id] = fragStateHolder"
+            )
+            funBuilder.endControlFlow() // close is (ID)
+            funBuilder.endControlFlow() // close when (id strat)
 
-        funBuilder.endControlFlow() // close when
+            funBuilder.endControlFlow() // close is (specific fragment)
+        }
+        funBuilder.endControlFlow() // close is (fragment)
+        funBuilder.endControlFlow() // close when inner
+        funBuilder.endControlFlow() // close when outer
             .addStatement("return stateHolder")
         return funBuilder.build()
     }
@@ -768,7 +839,6 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                                             stateHoldersForComponents: MutableMap<String, TypeSpec>) : TypeSpec {
         val builder = TypeSpec.classBuilder("StateHolder")
         componentToStateMap.forEach { componentEntry ->
-            val firstUpper = componentEntry.key.indexOfFirst { it.isUpperCase() }
             val stateHolderEntry = stateHoldersForComponents.entries.first { it.key == componentEntry.key }
             val classDecl = resolver.getClassDeclarationByName(componentEntry.key)!!
             if (isSubclassOf(classDecl, COMPONENT_ACTIVITY_QUALIFIED_NAME)) {
@@ -791,15 +861,15 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                         .initializer("%L", null)
                         .build()
                 )
-                val mutableMapIntToHolder = MutableMap::class.asClassName()
+                val mutableMapIntToHolder = MUTABLE_MAP
                     .parameterizedBy(
                         INT,
-                        ClassName(packageName, stateHolderEntry.key + "State")
+                        ClassName(packageName, stateHolderEntry.value.name!!)
                     )
-                val mutableMapStringToHolder = MutableMap::class.asClassName()
+                val mutableMapStringToHolder = MUTABLE_MAP
                     .parameterizedBy(
                         STRING,
-                        ClassName(packageName, stateHolderEntry.key + "State")
+                        ClassName(packageName, stateHolderEntry.value.name!!)
                     )
                 builder.addProperty(
                     PropertySpec.builder(
@@ -838,6 +908,9 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                 // only put into the state holder if we're retaining across config change
                 if (retainAnn.across.contains(StateDestroyingEvent.CONFIGURATION_CHANGE)) {
                     val resolvedType = propDecl.type.resolve()
+                    // TODO consider NOT doing this at all
+                    // using a default value is probably not needed / dumb
+                    // could just make all StateHolder fields nullable
                     val canUseDefaultVal = isBuiltInWithDefaultValue(resolver, resolvedType)
                     val propBuilder = PropertySpec.builder(
                             propDecl.simpleName.asString(),
@@ -853,7 +926,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                                 propBuilder.initializer("%L", false) // TODO initial value not supported by KSP? https://github.com/google/ksp/issues/642
                             }
                             resolver.builtIns.stringType -> {
-                                propBuilder.initializer("%L", "")
+                                propBuilder.initializer("%L", "\"\"")
                             }
                             resolver.builtIns.longType -> {
                                 propBuilder.initializer("%L", 0L)
@@ -872,6 +945,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                                 propBuilder.initializer("%L", 0)
                             }
                             else -> {
+                                logger.warn("unsupported type")
                                 logger.error("unsupported type")
                             }
                         }

@@ -7,6 +7,9 @@ import android.view.ViewGroup
 
 class TestFragment : StateSavingFragment() {
 
+    @Retain(across = [StateDestroyingEvent.CONFIGURATION_CHANGE])
+    var baz: String = "Hello"
+
     @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
     var foo: Boolean = false
 

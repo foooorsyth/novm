@@ -25,6 +25,9 @@ class MainActivity : StateSavingActivity() {
     @Retain(across = [CONFIGURATION_CHANGE])
     var isToggled = false
 
+    @Retain(across = [CONFIGURATION_CHANGE])
+    var strTest: String = "hello"
+
     @Retain(across = [PROCESS_DEATH])
     var someNullableDouble: Double? = null
 

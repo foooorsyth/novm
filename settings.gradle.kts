@@ -22,4 +22,5 @@ dependencyResolutionManagement {
 rootProject.name = "NoVM"
 include(":sample")
 include(":proc")
-include(":lib")
+include(":lib-core")
+include(":lib-android")

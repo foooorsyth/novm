@@ -40,27 +40,28 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
     var pass = 1
     override fun process(resolver: Resolver): List<KSAnnotated> {
         // TODO get package, statesavingactivity name from ksp options
-        val isStateSavingActivityWritten = resolver.getClassDeclarationByName("${DEFAULT_PACKAGE_NAME}.$DEFAULT_STATE_SAVING_ACTIVITY_SIMPLE_NAME") != null
-        val isStateSavingFragmentWritten = resolver.getClassDeclarationByName("${DEFAULT_PACKAGE_NAME}.$DEFAULT_STATE_SAVING_FRAGMENT_SIMPLE_NAME") != null
-        if (!isStateSavingActivityWritten) {
-            logger.warn("generating ssactivity, pass $pass")
-            generateStateSavingActivityFile(DEFAULT_PACKAGE_NAME).writeTo(codeGenerator, Dependencies(true))
-        }
-        if (!isStateSavingFragmentWritten) {
-            logger.warn("generating ssfragment, pass $pass")
-            generateStateSavingFragmentFile(DEFAULT_PACKAGE_NAME).writeTo(codeGenerator, Dependencies(true))
-        }
+//        val isStateSavingActivityWritten = resolver.getClassDeclarationByName("${DEFAULT_PACKAGE_NAME}.$DEFAULT_STATE_SAVING_ACTIVITY_SIMPLE_NAME") != null
+//        val isStateSavingFragmentWritten = resolver.getClassDeclarationByName("${DEFAULT_PACKAGE_NAME}.$DEFAULT_STATE_SAVING_FRAGMENT_SIMPLE_NAME") != null
+//        if (!isStateSavingActivityWritten) {
+//            logger.warn("generating ssactivity, pass $pass")
+//            generateStateSavingActivityFile(DEFAULT_PACKAGE_NAME).writeTo(codeGenerator, Dependencies(true))
+//        }
+//        if (!isStateSavingFragmentWritten) {
+//            logger.warn("generating ssfragment, pass $pass")
+//            generateStateSavingFragmentFile(DEFAULT_PACKAGE_NAME).writeTo(codeGenerator, Dependencies(true))
+//        }
+        // TODO instead of checking if static files are generated, just check the classpath for them
         val retainSymbols = resolver.getSymbolsWithAnnotation(Retain::class.qualifiedName!!, false).toList()
         val recheck = mutableListOf<KSAnnotated>()
         val componentToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>> = mutableMapOf()
         ensureSupported(
             retainSymbols,
-            isStateSavingActivityWritten,
-            isStateSavingFragmentWritten,
+            true,
+            true,
             recheck,
             componentToStateMap
         )
-        if (componentToStateMap.isNotEmpty() && isStateSavingActivityWritten) {
+        if (componentToStateMap.isNotEmpty()) {
             generateDynamicCode(resolver, componentToStateMap)
         }
         logger.warn("sizeof recheck: ${recheck.size}, pass: $pass")
@@ -130,7 +131,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
         val packageName = resolver.getClassDeclarationByName(componentToStateMap.keys.first())!!.packageName.asString() // TODO improve, get app package name from ksp options
         val stateHoldersForComponents = generateStateHoldersForComponents(resolver, componentToStateMap)
         val topLevelStateHolder = generateTopLevelStateHolder(packageName, resolver, componentToStateMap, stateHoldersForComponents)
-        val stateSaver = generateStateSaver(packageName,
+        val generatedStateSaver = generateStateSaver(packageName,
             resolver,
             componentToStateMap,
             topLevelStateHolder,
@@ -143,38 +144,38 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
             .addImport("androidx.appcompat.app", "AppCompatActivity")
             .addTypes(stateHoldersForComponents.values)
             .addType(topLevelStateHolder)
-            .addType(stateSaver)
+            .addType(generatedStateSaver)
             // StateSaver interface
-            .addType(
-                TypeSpec.interfaceBuilder("StateSaver")
-                    .addFunction(
-                        generateSaveStateConfigChangeSignature(packageName)
-                            .addModifiers(KModifier.ABSTRACT)
-                            .build()
-                    )
-                    .addFunction(
-                        generateRestoreStateConfigChangeSignature(packageName)
-                            .addModifiers(KModifier.ABSTRACT)
-                            .build()
-                    )
-                    .addFunction(
-                        generateSaveStateBundleSignature()
-                            .addModifiers(KModifier.ABSTRACT)
-                            .build()
-                    )
-                    .addFunction(
-                        generateRestoreStateBundleSignature()
-                            .addModifiers(KModifier.ABSTRACT)
-                            .build()
-                    )
-                    .build()
-            )
-            .addFunction(
-                FunSpec.builder("provideStateSaver")
-                    .returns(ClassName(packageName, "StateSaver"))
-                    .addStatement("%L", "return GeneratedStateSaver()")
-                    .build()
-            )
+//            .addType(
+//                TypeSpec.interfaceBuilder("StateSaver")
+//                    .addFunction(
+//                        generateSaveStateConfigChangeSignature(packageName)
+//                            .addModifiers(KModifier.ABSTRACT)
+//                            .build()
+//                    )
+//                    .addFunction(
+//                        generateRestoreStateConfigChangeSignature(packageName)
+//                            .addModifiers(KModifier.ABSTRACT)
+//                            .build()
+//                    )
+//                    .addFunction(
+//                        generateSaveStateBundleSignature()
+//                            .addModifiers(KModifier.ABSTRACT)
+//                            .build()
+//                    )
+//                    .addFunction(
+//                        generateRestoreStateBundleSignature()
+//                            .addModifiers(KModifier.ABSTRACT)
+//                            .build()
+//                    )
+//                    .build()
+//            )
+//            .addFunction(
+//                FunSpec.builder("provideStateSaver")
+//                    .returns(ClassName(packageName, "StateSaver"))
+//                    .addStatement("%L", "return GeneratedStateSaver()")
+//                    .build()
+//            )
             .build()
             .writeTo(codeGenerator, Dependencies(true, *componentContainingFiles.toTypedArray()))
     }
@@ -680,6 +681,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
         // TODO instead of manually recreating names below
         val funBuilder = generateRestoreStateConfigChangeSignature(packageName)
             .addModifiers(KModifier.OVERRIDE)
+            .addStatement("stateHolder as GeneratedStateHolder")
             .beginControlFlow("when (component) {")
         val activitiesToStates = componentToStateMap.filter { entry ->
             val classDecl = resolver.getClassDeclarationByName(entry.key)!!
@@ -800,7 +802,7 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
         // TODO instead of manually recreating names below
         val funBuilder = generateSaveStateConfigChangeSignature(packageName)
             .addModifiers(KModifier.OVERRIDE)
-            .addStatement("val stateHolder = StateHolder()")
+            .addStatement("val stateHolder = GeneratedStateHolder()")
             .beginControlFlow("when (component) {")
 
         val activitiesToStates = componentToStateMap.filter { entry ->
@@ -899,7 +901,8 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
     private fun generateTopLevelStateHolder(packageName: String, resolver: Resolver,
                                             componentToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>>,
                                             stateHoldersForComponents: MutableMap<String, TypeSpec>) : TypeSpec {
-        val builder = TypeSpec.classBuilder("StateHolder")
+        val builder = TypeSpec.classBuilder("GeneratedStateHolder")
+            .addSuperinterface(ClassName(DEFAULT_PACKAGE_NAME, "StateHolder"))
         componentToStateMap.forEach { componentEntry ->
             val stateHolderEntry = stateHoldersForComponents.entries.first { it.key == componentEntry.key }
             val classDecl = resolver.getClassDeclarationByName(componentEntry.key)!!

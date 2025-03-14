@@ -12,7 +12,7 @@ import com.squareup.kotlinpoet.ksp.toTypeName
  * to a JVM primitive. Does NOT include java.lang.Object or java.lang.String.
  * Also does not include nullable primitives as these cannot be placed in a Bundle
  */
-fun getBundleFunPostfixForPrimitive(resolver: Resolver, ksType: KSType) : String? {
+fun getBundleFunPostfixForPrimitive(resolver: Resolver, ksType: KSType): String? {
     if (ksType.isMarkedNullable) {
         return null
     }
@@ -20,27 +20,35 @@ fun getBundleFunPostfixForPrimitive(resolver: Resolver, ksType: KSType) : String
         resolver.builtIns.intType -> {
             return "Int"
         }
+
         resolver.builtIns.booleanType -> {
             return "Boolean"
         }
+
         resolver.builtIns.doubleType -> {
             return "Double"
         }
+
         resolver.builtIns.longType -> {
             return "Long"
         }
+
         resolver.builtIns.charType -> {
             return "Char"
         }
+
         resolver.builtIns.byteType -> {
             return "Byte"
         }
+
         resolver.builtIns.shortType -> {
             return "Short"
         }
+
         resolver.builtIns.floatType -> {
             return "Float"
         }
+
         else -> {
             null
         }
@@ -64,7 +72,7 @@ val BUNDLE_SUPPORTED_NULLABLE_TYPES = mapOf(
     // TODO CharSequence
 )
 
-fun getBundleFunPostfixForNonPrimitive(resolver: Resolver, ksType: KSType) : String? {
+fun getBundleFunPostfixForNonPrimitive(resolver: Resolver, ksType: KSType): String? {
     val mutatedType = if (ksType.isMarkedNullable) {
         ksType.makeNotNullable()
     } else {
@@ -84,7 +92,8 @@ data class BundleFunPostfixRet(
     val postfix: String? = null,
     val category: BundleFunPostfixCategory
 )
-fun getBundleFunPostfix(resolver: Resolver, ksType: KSType) : BundleFunPostfixRet {
+
+fun getBundleFunPostfix(resolver: Resolver, ksType: KSType): BundleFunPostfixRet {
     // eg. primitive, nullable non primitive, or subclass of serializable / parcel
     // also maybe return the nullability of the type
     val primStr = getBundleFunPostfixForPrimitive(resolver, ksType)
@@ -132,11 +141,14 @@ fun getBundleFunPostfix(resolver: Resolver, ksType: KSType) : BundleFunPostfixRe
     )
 }
 
-fun getBundleFunPostfix(resolver: Resolver, ksPropertyDeclaration: KSPropertyDeclaration) : BundleFunPostfixRet {
+fun getBundleFunPostfix(
+    resolver: Resolver,
+    ksPropertyDeclaration: KSPropertyDeclaration
+): BundleFunPostfixRet {
     return getBundleFunPostfix(resolver, ksPropertyDeclaration.type.resolve())
 }
 
-fun isBuiltInWithDefaultValue(resolver: Resolver, ksType: KSType) : Boolean {
+fun isBuiltInWithDefaultValue(resolver: Resolver, ksType: KSType): Boolean {
     return when (ksType) {
         resolver.builtIns.booleanType,
         resolver.builtIns.stringType,
@@ -150,19 +162,20 @@ fun isBuiltInWithDefaultValue(resolver: Resolver, ksType: KSType) : Boolean {
         resolver.builtIns.numberType -> {
             true
         }
+
         else -> {
             false
         }
     }
 }
 
-fun isSubclassOf(classDecl: KSClassDeclaration, qualifiedNameOfSuper: String) : Boolean {
+fun isSubclassOf(classDecl: KSClassDeclaration, qualifiedNameOfSuper: String): Boolean {
     val superTypeClassDecls = classDecl.superTypes.toList()
-        .mapNotNull { ksTypeReference ->  ksTypeReference.resolve().declaration as? KSClassDeclaration }
+        .mapNotNull { ksTypeReference -> ksTypeReference.resolve().declaration as? KSClassDeclaration }
     if (superTypeClassDecls.isEmpty()) {
         return false
     }
-    if (superTypeClassDecls.any { ksClassDeclaration -> ksClassDeclaration.qualifiedName?.asString() == qualifiedNameOfSuper}) {
+    if (superTypeClassDecls.any { ksClassDeclaration -> ksClassDeclaration.qualifiedName?.asString() == qualifiedNameOfSuper }) {
         return true
     }
     // recursively try supertypes

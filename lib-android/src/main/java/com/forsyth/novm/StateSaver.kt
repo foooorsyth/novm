@@ -14,12 +14,9 @@ class EmptyStateSaver : StateSaver {
         return EmptyStateHolder()
     }
 
-    override fun restoreStateConfigChange(component: Any, stateHolder: StateHolder) { }
-
-    override fun saveStateBundle(component: Any, bundle: Bundle) { }
-
-    override fun restoreStateBundle(component: Any, bundle: Bundle) { }
-
+    override fun restoreStateConfigChange(component: Any, stateHolder: StateHolder) {}
+    override fun saveStateBundle(component: Any, bundle: Bundle) {}
+    override fun restoreStateBundle(component: Any, bundle: Bundle) {}
 }
 
 fun provideStateSaver(): StateSaver {

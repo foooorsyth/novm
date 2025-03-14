@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.forsyth.novm"
+    namespace = "com.forsyth.novm.android"
     compileSdk = 35
 
     defaultConfig {

@@ -20,8 +20,10 @@ class TestFragment : StateSavingFragment() {
         // Inflate the layout for this fragment
         return inflater.inflate(R.layout.fragment_test, container, false)
     }
+
     companion object {
         const val TAG = "TestFragment"
+
         @JvmStatic
         fun newInstance() = TestFragment()
     }

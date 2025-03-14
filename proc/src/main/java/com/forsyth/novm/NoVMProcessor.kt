@@ -834,8 +834,8 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                 "${lowercaseFirstLetter(classDeclOfFrag.simpleName.asString())}StateByTag"
             funBuilder.beginControlFlow("if (component.tag == null) {")
             funBuilder.addStatement(
-                "throw RuntimeException(\"fragment of type " +
-                        "${classDeclOfFrag.qualifiedName!!.asString()} has identificationStrategy of TAG but fragment.tag is null\")"
+                "throw RuntimeException(\"Fragment@\${Integer.toHexString(System.identityHashCode(component))} of type " +
+                        "${classDeclOfFrag.qualifiedName!!.asString()} has identificationStrategy of TAG but Fragment's tag field is null\")"
             )
             funBuilder.endControlFlow()
             funBuilder.addStatement(
@@ -867,6 +867,23 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
                     funBuilder.addStatement("component.${ksPropertyDeclaration.simpleName.asString()} = fragStateHolder.${ksPropertyDeclaration.simpleName.asString()}")
                 }
             }
+            funBuilder.beginControlFlow("when(component.identificationStrategy) {")
+            funBuilder.beginControlFlow("FragmentIdentificationStrategy.CLASS -> {")
+            funBuilder.addStatement(
+                "stateHolder.$fragStateHolderFieldNameForClass = null"
+            )
+            funBuilder.endControlFlow() // close is (CLASS)
+            funBuilder.beginControlFlow("FragmentIdentificationStrategy.TAG -> {")
+            funBuilder.addStatement(
+                "stateHolder.$fragStateHolderFieldNameForTag.remove(component.tag!!)"
+            )
+            funBuilder.endControlFlow() // close is (TAG)
+            funBuilder.beginControlFlow("FragmentIdentificationStrategy.ID -> {")
+            funBuilder.addStatement(
+                "stateHolder.$fragStateHolderFieldNameForId.remove(component.id)"
+            )
+            funBuilder.endControlFlow() // close is (ID)
+            funBuilder.endControlFlow() // close when (id strat)
             funBuilder.endControlFlow() // close is (specific fragment)
         }
         funBuilder.endControlFlow() // close is (fragment)

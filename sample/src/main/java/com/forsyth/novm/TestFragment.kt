@@ -13,6 +13,9 @@ class TestFragment : StateSavingFragment() {
     @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
     var foo: Boolean = false
 
+
+    override var identificationStrategy: FragmentIdentificationStrategy = FragmentIdentificationStrategy.ID
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?

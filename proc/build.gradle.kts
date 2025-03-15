@@ -13,8 +13,8 @@ kotlin {
 }
 
 dependencies {
-    implementation("com.google.devtools.ksp:symbol-processing-api:2.1.0-1.0.29")
+    implementation(libs.symbol.processing.api)
     implementation(project(":lib-core"))
-    implementation("com.squareup:kotlinpoet:2.0.0")
-    implementation("com.squareup:kotlinpoet-ksp:2.0.0")
+    implementation(libs.kotlinpoet)
+    implementation(libs.kotlinpoet.ksp)
 }

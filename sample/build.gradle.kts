@@ -2,7 +2,6 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     id("com.google.devtools.ksp") version "2.1.0-1.0.29"
-
 }
 
 android {
@@ -38,12 +37,9 @@ android {
 }
 
 dependencies {
-    implementation(project(":lib-core"))
     implementation(project(":lib-android"))
-    implementation(project(":proc"))
     ksp(project(":proc"))
-    val fragment_version = "1.8.6"
-    implementation("androidx.fragment:fragment-ktx:$fragment_version")
+    implementation(libs.androidx.fragment.ktx)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)

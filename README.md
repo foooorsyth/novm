@@ -10,7 +10,7 @@ implementation("com.forsyth.novm:novm:$novm_version")
 ksp("com.forsyth.novm:compiler:$novm_version")
 ```
 
-Declare state with ```@Retain``` directly in your Activity and extend ```StateSavingActivity```
+Extend ```StateSavingActivity``` and annotate state with ```@Retain``` directly in your Activity. That's it! 
 
 ```kotlin
 import com.forsyth.novm.Retain
@@ -30,7 +30,7 @@ class MainActivity : StateSavingActivity() {
 }
 ```
 
-NOTE: State that is designated to survive process death must be of a type supported by [Bundle](https://developer.android.com/reference/android/os/Bundle). 
+NOTE: State that is designated to be retained across process death must be of a type supported by [Bundle](https://developer.android.com/reference/android/os/Bundle). 
 See [the docs](https://developer.android.com/topic/libraries/architecture/saving-states#onsaveinstancestate) for more guidance on state serialization. 
 
 ### Fragment support

@@ -1,5 +1,5 @@
 # novm
-## *You don't need a ViewModel!*
+*You don't need a ViewModel!*
 
 ### Usage
 
@@ -31,7 +31,7 @@ class MainActivity : StateSavingActivity() {
 ```
 
 NOTE: State that is designated to survive process death must be of a type supported by [Bundle](https://developer.android.com/reference/android/os/Bundle). 
-See [the docs](https://developer.android.com/topic/libraries/architecture/saving-states#onsaveinstancestate) for more info 
+See [the docs](https://developer.android.com/topic/libraries/architecture/saving-states#onsaveinstancestate) for more guidance on state serialization. 
 
 ### Fragment support
 

@@ -31,7 +31,7 @@ class MainActivity : StateSavingActivity() {
 ```
 
 NOTE: State that is designated to survive process death must be of a type supported by [Bundle](https://developer.android.com/reference/android/os/Bundle). 
-See: [https://developer.android.com/topic/libraries/architecture/saving-states#onsaveinstancestate](https://developer.android.com/topic/libraries/architecture/saving-states#onsaveinstancestate)
+See [the docs](https://developer.android.com/topic/libraries/architecture/saving-states#onsaveinstancestate) for more info 
 
 ### Fragment support
 
@@ -47,7 +47,7 @@ class SomeFragment : StateSavingFragment() {
     lateinit var computedHash: String
 
     // Optional override, see below
-    override var identificationStrategy: FragmentIdentificationStrategy = FragmentIdentificationStrategy.ID
+    override var identificationStrategy = FragmentIdentificationStrategy.ID
 }
 ```
 

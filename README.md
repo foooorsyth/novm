@@ -31,7 +31,8 @@ class MainActivity : StateSavingActivity() {
 ```
 
 NOTE: State that is designated to be retained across process death must be of a type supported by [Bundle](https://developer.android.com/reference/android/os/Bundle). 
-See [the docs](https://developer.android.com/topic/libraries/architecture/saving-states#onsaveinstancestate) for more guidance on state serialization. 
+See [the docs](https://developer.android.com/topic/libraries/architecture/saving-states#onsaveinstancestate) for more guidance on
+state retention in the event of process death.
 
 ### Fragment support
 

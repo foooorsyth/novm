@@ -1,63 +1,41 @@
 package com.forsyth.novm
 
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.os.Bundle
-import android.util.Log
+import android.widget.ImageView
+import android.widget.TextView
 import androidx.fragment.app.add
 import androidx.fragment.app.commit
 import com.forsyth.novm.StateDestroyingEvent.CONFIGURATION_CHANGE
 import com.forsyth.novm.StateDestroyingEvent.PROCESS_DEATH
-import java.io.Serializable
-
-data class SerializableData(
-    val str: String,
-    val myInt: Int
-): Serializable
 
 const val TAG = "MainActivity"
 
+fun fakeSha256() : String {
+    return "2CF24DBA5FB0A30E26E83B2AC5B9E29E1B161E5C1FA7425E73043362938B9824"
+}
+
 class MainActivity : StateSavingActivity() {
-
     @Retain(across = [CONFIGURATION_CHANGE])
-    var isToggled = false
-
-    @Retain(across = [CONFIGURATION_CHANGE])
-    var strTest: String = "hello"
+    lateinit var largeImage: Bitmap
 
     @Retain(across = [PROCESS_DEATH])
-    var someNullableDouble: Double? = null
-
-    @Retain(across = [PROCESS_DEATH])
-    var myText: String? = null
-
-    @Retain(across = [PROCESS_DEATH])
-    var intArray: IntArray = intArrayOf(0)
-
-    @Retain(across = [PROCESS_DEATH])
-    var primTest: Int = 4
-
-    @Retain(across = [PROCESS_DEATH])
-    var stringArraytest: Array<String>? = null
-
-    @Retain(across = [PROCESS_DEATH])
-    var intArrayListTest: ArrayList<Int>? = null
-
-    @Retain(across = [PROCESS_DEATH])
-    var bundleTest: Bundle? = null
-
-    @Retain(across = [PROCESS_DEATH])
-    var serializableTest: SerializableData? = SerializableData("foo", 5)
+    lateinit var computedHash: String
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         if (savedInstanceState == null) {
-            Log.d(TAG, "onCreate before frag commit")
+            largeImage = BitmapFactory.decodeResource(resources, R.mipmap.oxide_grey_g80)
+            computedHash = fakeSha256()
             supportFragmentManager.commit {
                 setReorderingAllowed(true)
-                add<TestFragment>(R.id.fragment_container, tag = "1234")
+                add<TestFragment>(R.id.fragment_container, tag = "uniqueTag")
             }
-            Log.d(TAG, "onCreate after frag commit")
         }
+        findViewById<ImageView>(R.id.imageView).setImageBitmap(largeImage)
+        findViewById<TextView>(R.id.tv_hash).text = computedHash
     }
 }

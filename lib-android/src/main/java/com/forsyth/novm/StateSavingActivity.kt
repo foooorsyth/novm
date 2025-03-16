@@ -73,17 +73,16 @@ open class StateSavingActivity : AppCompatActivity() {
         (lastCustomNonConfigurationInstance as? StateHolder)?.let { retainedState ->
             stateSaver.restoreStateConfigChange(this, retainedState)
         }
-    }
-
-    @CallSuper
-    override fun onRestoreInstanceState(savedInstanceState: Bundle) {
-        super.onRestoreInstanceState(savedInstanceState)
-        stateSaver.restoreStateBundle(this, savedInstanceState)
+        if (savedInstanceState != null) {
+            stateSaver.restoreStateBundle(this, savedInstanceState)
+        }
     }
 
     @CallSuper
     override fun onSaveInstanceState(outState: Bundle) {
+        Log.d(TAG, "onSaveInstanceState")
         stateSaver.saveStateBundle(this, outState)
+        Log.d(TAG, "${outState.size()}")
         super.onSaveInstanceState(outState)
     }
 

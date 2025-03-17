@@ -1,4 +1,4 @@
-# novm
+# novm ![build](https://github.com/foooorsyth/novm/actions/workflows/android.yml/badge.svg
 *You don't need a ViewModel!*
 
 ### Usage

@@ -32,8 +32,11 @@ android {
     }
 }
 
+group = Novmpub_gradle.Publishing.GROUP
+version = Novmpub_gradle.Publishing.VERSION
+
 dependencies {
-    api(project(":core"))
+    api(project(":novm-core"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)

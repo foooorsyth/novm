@@ -1,6 +1,7 @@
 plugins {
     id("java-library")
     alias(libs.plugins.jetbrains.kotlin.jvm)
+    id("novmpub")
 }
 java {
     sourceCompatibility = JavaVersion.VERSION_11
@@ -12,9 +13,12 @@ kotlin {
     }
 }
 
+group = Novmpub_gradle.Publishing.GROUP
+version = Novmpub_gradle.Publishing.VERSION
+
 dependencies {
     implementation(libs.symbol.processing.api)
-    implementation(project(":core"))
+    implementation(project(":novm-core"))
     implementation(libs.kotlinpoet)
     implementation(libs.kotlinpoet.ksp)
 }

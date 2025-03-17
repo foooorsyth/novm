@@ -21,6 +21,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "NoVM"
 include(":sample")
-include(":compiler")
-include(":core")
-include(":runtime")
+include(":novm-compiler")
+include(":novm-core")
+include(":novm-runtime")

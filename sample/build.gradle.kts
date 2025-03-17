@@ -37,8 +37,8 @@ android {
 }
 
 dependencies {
-    implementation(project(":runtime"))
-    ksp(project(":compiler"))
+    implementation(project(":novm-runtime"))
+    "ksp"(project(":novm-compiler"))
     implementation(libs.androidx.fragment.ktx)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)

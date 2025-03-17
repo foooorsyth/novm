@@ -14,7 +14,7 @@ kotlin {
 
 dependencies {
     implementation(libs.symbol.processing.api)
-    implementation(project(":lib-core"))
+    implementation(project(":core"))
     implementation(libs.kotlinpoet)
     implementation(libs.kotlinpoet.ksp)
 }

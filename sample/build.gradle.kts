@@ -37,8 +37,8 @@ android {
 }
 
 dependencies {
-    implementation(project(":lib-android"))
-    ksp(project(":proc"))
+    implementation(project(":runtime"))
+    ksp(project(":compiler"))
     implementation(libs.androidx.fragment.ktx)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)

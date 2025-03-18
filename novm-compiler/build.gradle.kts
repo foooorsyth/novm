@@ -5,7 +5,6 @@ plugins {
     id("java-library")
     alias(libs.plugins.jetbrains.kotlin.jvm)
     id("novmpub")
-    id("signing")
     id("com.vanniktech.maven.publish") version "0.31.0-rc2"
 }
 java {
@@ -27,7 +26,7 @@ mavenPublishing {
     coordinates(
         groupId = Publishing.GROUP,
         artifactId = Publishing.ARTIFACT_ID_COMPILER,
-        version = if (System.getenv("SNAPSHOT") != null || System.getenv("SNAPSHOT") != "") Publishing.VERSION + "-SNAPSHOT" else Publishing.VERSION
+        version = if (System.getenv("SNAPSHOT") == "SNAPSHOT") Publishing.VERSION + "-SNAPSHOT" else Publishing.VERSION
     )
     pom {
         name.set(Publishing.PROJ_NAME_COMPILER)

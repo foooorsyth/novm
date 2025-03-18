@@ -5,7 +5,6 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     id("novmpub")
-    id("signing")
     id("com.vanniktech.maven.publish") version "0.31.0-rc2"
 }
 
@@ -46,7 +45,7 @@ mavenPublishing {
     coordinates(
         groupId = Publishing.GROUP,
         artifactId = Publishing.ARTIFACT_ID_RUNTIME,
-        version = if (System.getenv("SNAPSHOT") != null || System.getenv("SNAPSHOT") != "") Publishing.VERSION + "-SNAPSHOT" else Publishing.VERSION
+        version = if (System.getenv("SNAPSHOT") == "SNAPSHOT") Publishing.VERSION + "-SNAPSHOT" else Publishing.VERSION
     )
     pom {
         name.set(Publishing.PROJ_NAME_RUNTIME)

@@ -30,7 +30,7 @@ mavenPublishing {
         version = if (System.getenv("SNAPSHOT") != null || System.getenv("SNAPSHOT") != "") Publishing.VERSION + "-SNAPSHOT" else Publishing.VERSION
     )
     pom {
-        name.set(Publishing.PROJ_NAME_RUNTIME)
+        name.set(Publishing.PROJ_NAME_COMPILER)
         description.set(Publishing.PROJ_DESC)
         inceptionYear.set(Publishing.PROJ_INCEPTION_YEAR)
         url.set(Publishing.GITHUB_URL)

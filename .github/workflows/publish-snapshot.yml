@@ -22,8 +22,8 @@ jobs:
     - name: Publish to Maven Central
       env:
         # Can't do lowercase env vars in the UI? arbitrage here
-        ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ env.ORG_GRADLE_PROJECT_MAVENCENTRALUSERNAME }}
-        ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ env.ORG_GRADLE_PROJECT_MAVENCENTRALPASSWORD }}
-        ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ env.ORG_GRADLE_PROJECT_SIGNINGINMEMORYKEY }}
-        ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ env.ORG_GRADLE_PROJECT_SIGNINGINMEMORYKEYPASSWORD }}
+        ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.ORG_GRADLE_PROJECT_MAVENCENTRALUSERNAME }}
+        ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.ORG_GRADLE_PROJECT_MAVENCENTRALPASSWORD }}
+        ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.ORG_GRADLE_PROJECT_SIGNINGINMEMORYKEY }}
+        ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.ORG_GRADLE_PROJECT_SIGNINGINMEMORYKEYPASSWORD }}
       run: ./gradlew publishAllPublicationsToMavenCentralRepository

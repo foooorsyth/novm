@@ -27,7 +27,7 @@ mavenPublishing {
     coordinates(
         groupId = Publishing.GROUP,
         artifactId = Publishing.ARTIFACT_ID_COMPILER,
-        version = Publishing.VERSION
+        version = if (System.getenv("SNAPSHOT") != null || System.getenv("SNAPSHOT") != "") Publishing.VERSION + "-SNAPSHOT" else Publishing.VERSION
     )
     pom {
         name.set(Publishing.PROJ_NAME_RUNTIME)

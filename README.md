@@ -1,11 +1,12 @@
 # novm ![build](https://github.com/foooorsyth/novm/actions/workflows/android.yml/badge.svg)
-*You don't need a ViewModel!*
+*ditch your ViewModels*
 
 ### Usage
 
-Add the library and symbol processor to your module's build.gradle file:
+First, [add the ksp plugin to your project](https://developer.android.com/build/migrate-to-ksp#add-ksp). 
+Then, add the novm library and symbol processor to your module's build.gradle file:
 ```kotlin
-val novm_version = "0.8.0"
+val novm_version = "0.8.0-rc1"
 implementation("com.forsyth.novm:novm:$novm_version")
 ksp("com.forsyth.novm:compiler:$novm_version")
 ```
@@ -30,7 +31,7 @@ class MainActivity : StateSavingActivity() {
 }
 ```
 
-NOTE: State that is designated to be retained across process death must be of a type supported by [Bundle](https://developer.android.com/reference/android/os/Bundle). 
+State that is designated to be retained across process death must be of a type supported by [Bundle](https://developer.android.com/reference/android/os/Bundle). 
 See [the docs](https://developer.android.com/topic/libraries/architecture/saving-states#onsaveinstancestate) for more guidance on
 state retention in the event of process death.
 
@@ -49,16 +50,19 @@ class SomeFragment : StateSavingFragment() {
 
     // Optional override, see below
     override var identificationStrategy = FragmentIdentificationStrategy.ID
+    // ...
 }
 ```
 
 Fragments are identified after recreation based on their ```identificationStrategy```:
 
-**FragmentIdentificationStrategy.TAG (default)**:
-- Fragments are identified by their unique ```tag```
+**FragmentIdentificationStrategy.TAG (default)**: Fragments are identified by their unique ```tag``` (you must give each of your Fragments using @Retain a unique tag)
 
-**FragmentIdentificationStrategy.ID**:
-- Fragments are identified by their ```id```
+**FragmentIdentificationStrategy.ID**: Fragments are identified by their ```id```
 
-**FragmentIdentificationStrategy.CLASS**:
-- Fragments are identified by their class
+**FragmentIdentificationStrategy.CLASS**: Fragments are identified by their class
+
+Behavior: only one Fragment of a given tag, id, or class will have its state restored before that state is discarded. 
+The first appropriate Fragment that attaches after novm retains its state will have its state restored. There is no time limit 
+to having state restored in a Fragment -- the Fragment does not need to immediately attach to its associated Activity to have its
+state restored from a prior StateDestroyingEvent. A Fragment must attach to the same type of Activity to have its state restored.

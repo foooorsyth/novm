@@ -1,4 +1,4 @@
-# novm ![build](https://github.com/foooorsyth/novm/actions/workflows/build.yml/badge.svg)
+# novm ![build](https://github.com/foooorsyth/novm/actions/workflows/build.yml/badge.svg) ![sonatype](https://maven-badges.herokuapp.com/sonatype-central/com.forsyth.novm/novm-runtime/badge.svg)
 *ditch your ViewModels*
 
 ### Quick Start

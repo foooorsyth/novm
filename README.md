@@ -1,7 +1,7 @@
 # novm ![build](https://github.com/foooorsyth/novm/actions/workflows/build.yml/badge.svg)
 *ditch your ViewModels*
 
-### Usage
+### Quick Start
 
 First, [add the ksp plugin to your project](https://developer.android.com/build/migrate-to-ksp#add-ksp). 
 Then, add the novm runtime and compiler to your module's build.gradle file:
@@ -11,7 +11,7 @@ implementation("com.forsyth.novm:novm-runtime:$novm_version")
 ksp("com.forsyth.novm:novm-compiler:$novm_version")
 ```
 
-Extend ```StateSavingActivity``` and annotate state with ```@Retain``` directly in your Activity. That's it! 
+Extend ```StateSavingActivity``` and annotate state with ```@Retain``` directly in your Activity, as nature intended. 
 
 ```kotlin
 import com.forsyth.novm.Retain
@@ -61,8 +61,3 @@ Fragments are identified after recreation based on their ```identificationStrate
 **FragmentIdentificationStrategy.ID**: Fragments are identified by their ```id```
 
 **FragmentIdentificationStrategy.CLASS**: Fragments are identified by their class
-
-Behavior: only one Fragment of a given tag, id, or class will have its state restored before that state is discarded. 
-The first appropriate Fragment that attaches after novm retains its state will have its state restored. There is no time limit 
-to having state restored in a Fragment -- the Fragment does not need to immediately attach to its associated Activity to have its
-state restored from a prior StateDestroyingEvent. A Fragment must attach to the same type of Activity to have its state restored.

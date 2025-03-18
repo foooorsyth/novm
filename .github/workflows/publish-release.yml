@@ -1,11 +1,11 @@
-name: publish-snapshot
+name: publish-release
 
 on:
   push:
     tags:
-      - 'snapshot/**'
+      - 'release/**'
 jobs:
-  snapshot:
+  release:
     runs-on: ubuntu-latest
 
     steps:
@@ -26,4 +26,4 @@ jobs:
         ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.ORG_GRADLE_PROJECT_MAVENCENTRALPASSWORD }}
         ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.ORG_GRADLE_PROJECT_SIGNINGINMEMORYKEY }}
         ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.ORG_GRADLE_PROJECT_SIGNINGINMEMORYKEYPASSWORD }}
-      run: ./gradlew publishAllPublicationsToMavenCentralRepository
+      run: ./gradlew publishAndReleaseToMavenCentral --no-configuration-cache

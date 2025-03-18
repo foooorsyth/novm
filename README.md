@@ -4,11 +4,11 @@
 ### Usage
 
 First, [add the ksp plugin to your project](https://developer.android.com/build/migrate-to-ksp#add-ksp). 
-Then, add the novm library and symbol processor to your module's build.gradle file:
+Then, add the novm runtime and compiler to your module's build.gradle file:
 ```kotlin
 val novm_version = "0.8.0-rc1"
-implementation("com.forsyth.novm:novm:$novm_version")
-ksp("com.forsyth.novm:compiler:$novm_version")
+implementation("com.forsyth.novm:novm-runtime:$novm_version")
+ksp("com.forsyth.novm:novm-compiler:$novm_version")
 ```
 
 Extend ```StateSavingActivity``` and annotate state with ```@Retain``` directly in your Activity. That's it! 

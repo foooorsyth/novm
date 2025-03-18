@@ -20,4 +20,10 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     - name: Publish to Maven Central
+      env:
+        # Can't do lowercase env vars in the UI? arbitrage here
+        ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ env.ORG_GRADLE_PROJECT_MAVENCENTRALUSERNAME }}
+        ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ env.ORG_GRADLE_PROJECT_MAVENCENTRALPASSWORD }}
+        ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ env.ORG_GRADLE_PROJECT_SIGNINGINMEMORYKEY }}
+        ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ env.ORG_GRADLE_PROJECT_SIGNINGINMEMORYKEYPASSWORD }}
       run: ./gradlew publishAllPublicationsToMavenCentralRepository

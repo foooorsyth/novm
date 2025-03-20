@@ -25,6 +25,10 @@
             android:name="com.forsyth.novm.sample.LibraryActivity"
             android:exported="true"
             />
+        <activity
+            android:name="com.forsyth.novm.sample2.AnotherLibraryActivity"
+            android:exported="true"
+            />
     </application>
 
 </manifest>

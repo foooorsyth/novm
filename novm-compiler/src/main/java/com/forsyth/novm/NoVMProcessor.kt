@@ -3,6 +3,8 @@ package com.forsyth.novm
 import com.google.devtools.ksp.KspExperimental
 import com.google.devtools.ksp.getAnnotationsByType
 import com.google.devtools.ksp.getClassDeclarationByName
+import com.google.devtools.ksp.getDeclaredProperties
+import com.google.devtools.ksp.isAnnotationPresent
 import com.google.devtools.ksp.isLocal
 import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.Dependencies
@@ -13,6 +15,7 @@ import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import com.squareup.kotlinpoet.AnnotationSpec
+import com.squareup.kotlinpoet.BOOLEAN
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
@@ -35,6 +38,7 @@ const val COMPONENT_ACTIVITY_QUALIFIED_NAME = "androidx.activity.ComponentActivi
 const val FRAGMENT_QUALIFIED_NAME = "androidx.fragment.app.Fragment"
 const val DEFAULT_PACKAGE_NAME = "com.forsyth.novm"
 const val DEFAULT_DEPENDENCY_PACKAGE_NAME = "com.forsyth.novm.dependencies"
+const val DEPENCY_FILENAME_PROPERTY_PREFIX = "novm_"
 const val DEFAULT_STATE_SAVING_ACTIVITY_SIMPLE_NAME = "StateSavingActivity"
 const val DEFAULT_STATE_SAVING_FRAGMENT_SIMPLE_NAME = "StateSavingFragment"
 const val OPTION_ISLIBRARY_KEY = "isLibrary"
@@ -44,34 +48,53 @@ class NoVMProcessor(
     val options: Map<String, String>,
     val logger: KSPLogger) : SymbolProcessor {
     var pass = 1
-    @OptIn(KspExperimental::class)
+    var hasWrittenDynamic = false
+
     override fun process(resolver: Resolver): List<KSAnnotated> {
         val isLibrary = options.containsKey(OPTION_ISLIBRARY_KEY) && options[OPTION_ISLIBRARY_KEY]!!.lowercase() == "true"
-        if (isLibrary) {
-            logger.warn("isLib pass $pass")
-            if (pass != 1) {
-                pass += 1
-                return emptyList()
-            }
-            val randomFileName = generateRandomAlphanumeric()
-            FileSpec.builder(
-                DEFAULT_DEPENDENCY_PACKAGE_NAME,
-                randomFileName // non-deterministic build tool LUL
-            )
-            .addProperty(
-                PropertySpec.builder("com_forsyth_foo", STRING, KModifier.CONST)
-                    .initializer("%L", "\"com.forsyth.foo\"")
-                    .build()
-            )
-            .build()
-            .writeTo(codeGenerator, Dependencies(aggregating = false))
-            pass += 1
-            return emptyList()
+        val ret = if (isLibrary) {
+            processLibrary(resolver)
+        } else {
+            processApp(resolver)
         }
+        pass += 1
+        return ret
+    }
+
+    @OptIn(KspExperimental::class)
+    private fun processApp(resolver: Resolver) : List<KSAnnotated> {
         val pkgDecls = resolver.getDeclarationsFromPackage(DEFAULT_DEPENDENCY_PACKAGE_NAME)
-        pkgDecls.toList().forEach { decl ->
-            logger.warn("pkg dcl: ${decl.qualifiedName?.asString()}")
+        // TODO search nested class eventually, for now just components at the top level of package
+        val topLvlClassDcls = pkgDecls
+            .filterIsInstance(KSPropertyDeclaration::class.java)
+            .map { it.simpleName.asString().replace('_', '.') }
+            .map { pkgContainingRetains ->
+                logger.warn("pkgContainingRetains: $pkgContainingRetains")
+                val redirPkgDecls = resolver.getDeclarationsFromPackage(pkgContainingRetains)
+                // Only declarations at the top level of the package -- not property decls inside of classes
+                // need to recursively search
+                logger.warn("redirPkgDecl size: ${redirPkgDecls.toList().size}")
+                redirPkgDecls.toList().forEach { redirPkgDecl ->
+                    logger.warn("all decls: " + redirPkgDecl.qualifiedName!!.asString())
+
+                }
+                redirPkgDecls
+             }
+            .flatten()
+            .filterIsInstance<KSClassDeclaration>()
+            .toList()
+        val retainSymbols = mutableListOf<KSAnnotated>()
+        topLvlClassDcls.forEach { ksClassDeclaration ->
+            retainSymbols.addAll(
+                ksClassDeclaration
+                    .getDeclaredProperties()
+                    .filter { ksPropertyDeclaration -> ksPropertyDeclaration.isAnnotationPresent(Retain::class) }
+                    .map { ksPropertyDeclaration -> ksPropertyDeclaration as KSAnnotated }
+                    .toList()
+            )
         }
+        logger.warn("dcls in libs: ${pkgDecls.toList().size}")
+        logger.warn("retain symbols from libs: ${retainSymbols.size}")
         // TODO get package, statesavingactivity name from ksp options
 //        val isStateSavingActivityWritten = resolver.getClassDeclarationByName("${DEFAULT_PACKAGE_NAME}.$DEFAULT_STATE_SAVING_ACTIVITY_SIMPLE_NAME") != null
 //        val isStateSavingFragmentWritten = resolver.getClassDeclarationByName("${DEFAULT_PACKAGE_NAME}.$DEFAULT_STATE_SAVING_FRAGMENT_SIMPLE_NAME") != null
@@ -84,9 +107,7 @@ class NoVMProcessor(
 //            generateStateSavingFragmentFile(DEFAULT_PACKAGE_NAME).writeTo(codeGenerator, Dependencies(true))
 //        }
         // TODO instead of checking if static files are generated, just check the classpath for them
-        val retainSymbols =
-            resolver.getSymbolsWithAnnotation(Retain::class.qualifiedName!!, false).toList()
-
+        retainSymbols.addAll(resolver.getSymbolsWithAnnotation(Retain::class.qualifiedName!!, false))
         val recheck = mutableListOf<KSAnnotated>()
         val componentToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>> =
             mutableMapOf()
@@ -97,12 +118,72 @@ class NoVMProcessor(
             recheck,
             componentToStateMap
         )
-        if (componentToStateMap.isNotEmpty()) {
+        if (componentToStateMap.isNotEmpty() && !hasWrittenDynamic) {
             generateDynamicCode(resolver, componentToStateMap)
+            hasWrittenDynamic = true
         }
         logger.warn("sizeof recheck: ${recheck.size}, pass: $pass")
-        pass += 1
         return recheck
+    }
+
+    @OptIn(KspExperimental::class)
+    private fun processLibrary(resolver: Resolver) : List<KSAnnotated> {
+        if (pass != 1) { // only do this once, no matter what
+            return emptyList()
+        }
+        val takenFileNames = resolver.getDeclarationsFromPackage(DEFAULT_DEPENDENCY_PACKAGE_NAME)
+            .filter {
+               it.simpleName.asString().startsWith(DEPENCY_FILENAME_PROPERTY_PREFIX)
+            }
+            .map { it.simpleName.asString().substring(DEPENCY_FILENAME_PROPERTY_PREFIX.length) }
+            .toSet()
+        var randomFileName: String
+        do {
+            randomFileName = generateRandomAlphanumeric() // non-deterministic build plugin LUL
+        } while (takenFileNames.contains(randomFileName))
+
+        val retainSymbols = resolver.getSymbolsWithAnnotation(Retain::class.qualifiedName!!, false).toList()
+        val fileBuilder = FileSpec.builder(
+            DEFAULT_DEPENDENCY_PACKAGE_NAME,
+            randomFileName// non-deterministic build tool LUL
+        )
+        val componentToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>> =
+            mutableMapOf()
+        val recheck = mutableListOf<KSAnnotated>()
+        ensureSupported(
+            retainSymbols,
+            true,
+            true,
+            recheck,
+            componentToStateMap
+        )
+        fileBuilder
+            .addProperty(
+                PropertySpec.builder(
+                    DEPENCY_FILENAME_PROPERTY_PREFIX + randomFileName, BOOLEAN, KModifier.CONST
+                )
+                .initializer("%L", "false")
+                .build()
+            )
+        componentToStateMap.keys.forEach { componentFullyQualified ->
+            val pkg = resolver.getClassDeclarationByName(componentFullyQualified)!!.packageName.asString()
+            val pkgUnderscore = pkg.replace('.', '_')
+            // need to check for properties that may already exist with the same package name
+            // TODO this is slow and this getDeclarations.. should be memoized
+            val alreadyDeclared = resolver.getDeclarationsFromPackage(pkg).firstOrNull { it.simpleName.asString() == pkgUnderscore } != null
+            if (!alreadyDeclared) {
+                fileBuilder
+                    .addProperty(
+                        PropertySpec.builder(pkgUnderscore, BOOLEAN, KModifier.CONST)
+                            .initializer("%L", "false")
+                            .build()
+                    )
+            }
+        }
+        fileBuilder
+            .build()
+            .writeTo(codeGenerator, Dependencies(aggregating = false))
+        return emptyList()
     }
 
     fun generateRandomAlphanumeric(length: Int = 6): String {
@@ -122,18 +203,23 @@ class NoVMProcessor(
         logger.warn("ensureSupported#pass: $pass")
         retainSymbols.forEach { retainNode: KSAnnotated ->
             val propertyDecl = retainNode as? KSPropertyDeclaration
+            
             if (propertyDecl == null) {
-                logger.error("@State must annotate a property declaration, skipping...")
+                logger.error("State marked with @Retain must annotate a property declaration, skipping...")
+                return@forEach
+            }
+            if (!propertyDecl.isMutable) {
+                logger.error("State marked with @Retain must be mutable")
                 return@forEach
             }
             if (propertyDecl.parentDeclaration == null) {
-                logger.error("@State cannot be declared at top level, skipping ${propertyDecl.simpleName}")
+                logger.error("State marked with @Retain cannot be declared at top level, skipping ${propertyDecl.simpleName}")
                 return@forEach
             }
             val parentClassDecl = propertyDecl.parentDeclaration as? KSClassDeclaration
             if (parentClassDecl == null) {
                 // TODO handle hostOf / hostedBy
-                logger.error("@State must be declared within a ComponentActivity or Fragment, skipping ${propertyDecl.simpleName}")
+                logger.error("State marked with @Retain must be declared within a ComponentActivity or Fragment, skipping ${propertyDecl.simpleName}")
                 return@forEach
             }
             logger.warn("ensureSupported#classDecl: ${parentClassDecl.qualifiedName!!.asString()}")
@@ -145,15 +231,15 @@ class NoVMProcessor(
             if (!isSubclassOfComponentActivity && !isSubclassOfFragment) {
                 if (!isStateSavingActivityValid || !isStateSavingFragmentValid) {
                     // ALL generated StateSavingX must be generated before we can make a determination here
-                    //logger.warn("@State must be declared within a ComponentActivity or Fragment, checking ${propertyDecl.simpleName} again after codegen...")
+                    //logger.warn("State marked with @Retain must be declared within a ComponentActivity or Fragment, checking ${propertyDecl.simpleName} again after codegen...")
                     recheck.add(retainNode)
                 } else {
-                    logger.error("@State must be declared within a ComponentActivity or Fragment: ${propertyDecl.simpleName}")
+                    logger.error("State marked with @Retain must be declared within a ComponentActivity or Fragment: ${propertyDecl.simpleName}")
                     return
                 }
             }
             if (parentClassDecl.isLocal()) {
-                logger.error("@State cannot be contained by local declaration, skipping $${propertyDecl.simpleName}")
+                logger.error("State marked with @Retain cannot be contained by local declaration, skipping $${propertyDecl.simpleName}")
                 return@forEach
             }
             if (!componentToStateMap.contains(parentClassDecl.qualifiedName!!.asString())) {
@@ -179,25 +265,23 @@ class NoVMProcessor(
                 resolver.getClassDeclarationByName(componentFullyQualified)?.containingFile
             }
         val noVMDynamicFileName = "NoVMDynamic"
-        val packageName =
-            resolver.getClassDeclarationByName(componentToStateMap.keys.first())!!.packageName.asString() // TODO improve, get app package name from ksp options
         val stateHoldersForComponents =
             generateStateHoldersForComponents(resolver, componentToStateMap)
         val topLevelStateHolder = generateTopLevelStateHolder(
-            packageName,
+            DEFAULT_PACKAGE_NAME,
             resolver,
             componentToStateMap,
             stateHoldersForComponents
         )
         val generatedStateSaver = generateStateSaver(
-            packageName,
+            DEFAULT_PACKAGE_NAME,
             resolver,
             componentToStateMap,
             topLevelStateHolder,
             stateHoldersForComponents
         )
 
-        FileSpec.builder(packageName, noVMDynamicFileName)
+        FileSpec.builder(DEFAULT_PACKAGE_NAME, noVMDynamicFileName)
             .addImport("android.os", "Bundle")
             .addImport("androidx.annotation", "CallSuper")
             .addImport("androidx.appcompat.app", "AppCompatActivity")
@@ -303,9 +387,9 @@ class NoVMProcessor(
     }
 
     private fun generateStateSavingActivityFile(packageName: String): FileSpec {
-        return FileSpec.builder(packageName, "StateSavingActivity")
+        return FileSpec.builder(packageName, DEFAULT_STATE_SAVING_ACTIVITY_SIMPLE_NAME)
             .addType(
-                TypeSpec.classBuilder("StateSavingActivity")
+                TypeSpec.classBuilder(DEFAULT_STATE_SAVING_ACTIVITY_SIMPLE_NAME)
                     .addModifiers(KModifier.OPEN)
                     .superclass(ClassName("androidx.appcompat.app", "AppCompatActivity"))
                     .addProperty(
@@ -1023,8 +1107,8 @@ class NoVMProcessor(
                 "${lowercaseFirstLetter(classDeclOfFrag.simpleName.asString())}StateByTag"
             funBuilder.beginControlFlow("if (component.tag == null) {")
             funBuilder.addStatement(
-                "throw RuntimeException(\"fragment of type " +
-                        "${classDeclOfFrag.qualifiedName!!.asString()} has identificationStrategy of TAG but fragment.tag is null\")"
+                "throw RuntimeException(\"Fragment@\${Integer.toHexString(System.identityHashCode(component))} of type " +
+                        "${classDeclOfFrag.qualifiedName!!.asString()} has identificationStrategy of TAG but Fragment's tag field is null\")"
             )
             funBuilder.endControlFlow()
             funBuilder.addStatement("val fragStateHolder = ${classDeclOfFrag.simpleName.asString()}State()")

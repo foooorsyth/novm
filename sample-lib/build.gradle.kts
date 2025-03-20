@@ -1,8 +1,12 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
+    id("com.google.devtools.ksp") version "2.1.0-1.0.29"
 }
 
+ksp {
+    arg("isLibrary", "true")
+}
 
 android {
     namespace = "com.forsyth.novm.sample"
@@ -35,6 +39,7 @@ android {
 
 dependencies {
     implementation(project(":novm-runtime"))
+    ksp(project(":novm-compiler"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)

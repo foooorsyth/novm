@@ -6,6 +6,6 @@ import com.google.devtools.ksp.processing.SymbolProcessorProvider
 
 class NoVMProcessorProvider : SymbolProcessorProvider {
     override fun create(environment: SymbolProcessorEnvironment): SymbolProcessor {
-        return NoVMProcessor(environment.codeGenerator, environment.logger)
+        return NoVMProcessor(environment.codeGenerator, environment.options, environment.logger)
     }
 }

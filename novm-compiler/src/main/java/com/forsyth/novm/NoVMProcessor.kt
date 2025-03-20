@@ -28,40 +28,49 @@ import com.squareup.kotlinpoet.ksp.toClassName
 import com.squareup.kotlinpoet.ksp.toTypeName
 import com.squareup.kotlinpoet.ksp.writeTo
 import java.util.Locale
+import kotlin.random.Random
 
 
 const val COMPONENT_ACTIVITY_QUALIFIED_NAME = "androidx.activity.ComponentActivity"
 const val FRAGMENT_QUALIFIED_NAME = "androidx.fragment.app.Fragment"
 const val DEFAULT_PACKAGE_NAME = "com.forsyth.novm"
+const val DEFAULT_DEPENDENCY_PACKAGE_NAME = "com.forsyth.novm.dependencies"
 const val DEFAULT_STATE_SAVING_ACTIVITY_SIMPLE_NAME = "StateSavingActivity"
 const val DEFAULT_STATE_SAVING_FRAGMENT_SIMPLE_NAME = "StateSavingFragment"
+const val OPTION_ISLIBRARY_KEY = "isLibrary"
 
-class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : SymbolProcessor {
+class NoVMProcessor(
+    val codeGenerator: CodeGenerator,
+    val options: Map<String, String>,
+    val logger: KSPLogger) : SymbolProcessor {
     var pass = 1
     @OptIn(KspExperimental::class)
     override fun process(resolver: Resolver): List<KSAnnotated> {
-        val lib = resolver.getClassDeclarationByName("com.forsyth.novm.sample.LibraryActivity")
-        if (lib == null) {
-            logger.warn("mission failed")
-        } else {
-            logger.warn("lib is not null?")
-        }
-        logger.warn("lib decl size: ${lib?.declarations?.toList()?.size}")
-        lib?.declarations?.forEach { field ->
-            logger.warn("Field: ${field.simpleName.asString()}")
-            if (field.annotations.toList().isEmpty()) {
-                logger.warn("  No annotations found on this field")
-            } else {
-                field.annotations.forEach { annotation ->
-                    logger.warn("  Annotation: ${annotation.annotationType.resolve().declaration.qualifiedName?.asString()}")
-                }
+        val isLibrary = options.containsKey(OPTION_ISLIBRARY_KEY) && options[OPTION_ISLIBRARY_KEY]!!.lowercase() == "true"
+        if (isLibrary) {
+            logger.warn("isLib pass $pass")
+            if (pass != 1) {
+                pass += 1
+                return emptyList()
             }
+            val randomFileName = generateRandomAlphanumeric()
+            FileSpec.builder(
+                DEFAULT_DEPENDENCY_PACKAGE_NAME,
+                randomFileName // non-deterministic build tool LUL
+            )
+            .addProperty(
+                PropertySpec.builder("com_forsyth_foo", STRING, KModifier.CONST)
+                    .initializer("%L", "\"com.forsyth.foo\"")
+                    .build()
+            )
+            .build()
+            .writeTo(codeGenerator, Dependencies(aggregating = false))
+            pass += 1
+            return emptyList()
         }
-        resolver.getAllFiles().forEach { file ->
-            logger.warn("File: ${file.fileName}")
-            file.declarations.forEach { decl ->
-                logger.warn("Declaration: ${decl.simpleName.asString()}")
-            }
+        val pkgDecls = resolver.getDeclarationsFromPackage(DEFAULT_DEPENDENCY_PACKAGE_NAME)
+        pkgDecls.toList().forEach { decl ->
+            logger.warn("pkg dcl: ${decl.qualifiedName?.asString()}")
         }
         // TODO get package, statesavingactivity name from ksp options
 //        val isStateSavingActivityWritten = resolver.getClassDeclarationByName("${DEFAULT_PACKAGE_NAME}.$DEFAULT_STATE_SAVING_ACTIVITY_SIMPLE_NAME") != null
@@ -78,14 +87,6 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
         val retainSymbols =
             resolver.getSymbolsWithAnnotation(Retain::class.qualifiedName!!, false).toList()
 
-        val pkgsWAnn = resolver.getPackagesWithAnnotation(Retain::class.qualifiedName!!)
-        pkgsWAnn.toList().forEach {
-            logger.warn("pkg w ann: $it")
-        }
-        val pkgDecls = resolver.getDeclarationsFromPackage("com.forsyth.novm.sample")
-        pkgDecls.toList().forEach { decl ->
-            logger.warn("pkg dcl: ${decl.qualifiedName?.asString()}")
-        }
         val recheck = mutableListOf<KSAnnotated>()
         val componentToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>> =
             mutableMapOf()
@@ -102,6 +103,13 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
         logger.warn("sizeof recheck: ${recheck.size}, pass: $pass")
         pass += 1
         return recheck
+    }
+
+    fun generateRandomAlphanumeric(length: Int = 6): String {
+        val charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+        return (1..length)
+            .map { charset[Random.nextInt(charset.length)] }
+            .joinToString("")
     }
 
     private fun ensureSupported(

@@ -5,7 +5,7 @@ plugins {
 }
 
 ksp {
-    arg("isLibrary", "true")
+    arg("isDependency", "true")
 }
 
 android {

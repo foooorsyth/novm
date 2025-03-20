@@ -4,14 +4,14 @@
 ### Quick Start
 
 First, [add the ksp plugin to your project](https://developer.android.com/build/migrate-to-ksp#add-ksp). 
-Then, add the novm runtime and compiler to your module's build.gradle file:
+Then, add the novm runtime and compiler to your module's build.gradle.kts file:
 ```kotlin
 val novm_version = "0.8.0"
 implementation("com.forsyth.novm:novm-runtime:$novm_version")
 ksp("com.forsyth.novm:novm-compiler:$novm_version")
 ```
 
-Extend ```StateSavingActivity``` and annotate state with ```@Retain``` directly in your Activity, as nature intended. 
+Extend ```StateSavingActivity```, declare state directly in your Activity, and annotate it with ```@Retain```
 
 ```kotlin
 import com.forsyth.novm.Retain
@@ -61,3 +61,12 @@ Fragments are identified after recreation based on their ```identificationStrate
 **FragmentIdentificationStrategy.ID**: Fragments are identified by their ```id```
 
 **FragmentIdentificationStrategy.CLASS**: Fragments are identified by their class
+
+### Multi-module Support
+
+novm supports apps with multiple modules. Library modules must declare themselves as dependencies in their build.gradle.kts file:
+```kotlin
+ksp {
+    arg("isDependency", "true")
+}
+```

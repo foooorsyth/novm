@@ -15,7 +15,6 @@ import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import com.squareup.kotlinpoet.AnnotationSpec
-import com.squareup.kotlinpoet.BOOLEAN
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
@@ -41,7 +40,7 @@ const val DEFAULT_DEPENDENCY_PACKAGE_NAME = "com.forsyth.novm.dependencies"
 const val DEPENCY_FILENAME_PROPERTY_PREFIX = "novm_"
 const val DEFAULT_STATE_SAVING_ACTIVITY_SIMPLE_NAME = "StateSavingActivity"
 const val DEFAULT_STATE_SAVING_FRAGMENT_SIMPLE_NAME = "StateSavingFragment"
-const val OPTION_ISLIBRARY_KEY = "isLibrary"
+const val OPTION_IS_DEPENDENCY = "isDependency"
 
 class NoVMProcessor(
     val codeGenerator: CodeGenerator,
@@ -51,9 +50,9 @@ class NoVMProcessor(
     var hasWrittenDynamic = false
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
-        val isLibrary = options.containsKey(OPTION_ISLIBRARY_KEY) && options[OPTION_ISLIBRARY_KEY]!!.lowercase() == "true"
+        val isLibrary = options.containsKey(OPTION_IS_DEPENDENCY) && options[OPTION_IS_DEPENDENCY]!!.lowercase() == "true"
         val ret = if (isLibrary) {
-            processLibrary(resolver)
+            processDependency(resolver)
         } else {
             processApp(resolver)
         }
@@ -113,8 +112,6 @@ class NoVMProcessor(
             mutableMapOf()
         ensureSupported(
             retainSymbols,
-            true,
-            true,
             recheck,
             componentToStateMap
         )
@@ -127,7 +124,7 @@ class NoVMProcessor(
     }
 
     @OptIn(KspExperimental::class)
-    private fun processLibrary(resolver: Resolver) : List<KSAnnotated> {
+    private fun processDependency(resolver: Resolver) : List<KSAnnotated> {
         if (pass != 1) { // only do this once, no matter what
             return emptyList()
         }
@@ -152,17 +149,15 @@ class NoVMProcessor(
         val recheck = mutableListOf<KSAnnotated>()
         ensureSupported(
             retainSymbols,
-            true,
-            true,
             recheck,
             componentToStateMap
         )
         fileBuilder
             .addProperty(
                 PropertySpec.builder(
-                    DEPENCY_FILENAME_PROPERTY_PREFIX + randomFileName, BOOLEAN, KModifier.CONST
+                    DEPENCY_FILENAME_PROPERTY_PREFIX + randomFileName, INT, KModifier.CONST
                 )
-                .initializer("%L", "false")
+                .initializer("%L", "0")
                 .build()
             )
         componentToStateMap.keys.forEach { componentFullyQualified ->
@@ -174,8 +169,8 @@ class NoVMProcessor(
             if (!alreadyDeclared) {
                 fileBuilder
                     .addProperty(
-                        PropertySpec.builder(pkgUnderscore, BOOLEAN, KModifier.CONST)
-                            .initializer("%L", "false")
+                        PropertySpec.builder(pkgUnderscore, INT, KModifier.CONST)
+                            .initializer("%L", "0")
                             .build()
                     )
             }
@@ -195,8 +190,6 @@ class NoVMProcessor(
 
     private fun ensureSupported(
         retainSymbols: List<KSAnnotated>,
-        isStateSavingActivityValid: Boolean,
-        isStateSavingFragmentValid: Boolean,
         recheck: MutableList<KSAnnotated>,
         componentToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>>
     ) {
@@ -229,14 +222,8 @@ class NoVMProcessor(
             logger.warn("ensureSupported#isSubAct?: $isSubclassOfComponentActivity")
             logger.warn("ensureSupported#isSubFrag?: $isSubclassOfFragment")
             if (!isSubclassOfComponentActivity && !isSubclassOfFragment) {
-                if (!isStateSavingActivityValid || !isStateSavingFragmentValid) {
-                    // ALL generated StateSavingX must be generated before we can make a determination here
-                    //logger.warn("State marked with @Retain must be declared within a ComponentActivity or Fragment, checking ${propertyDecl.simpleName} again after codegen...")
-                    recheck.add(retainNode)
-                } else {
-                    logger.error("State marked with @Retain must be declared within a ComponentActivity or Fragment: ${propertyDecl.simpleName}")
-                    return
-                }
+                logger.error("State marked with @Retain must be declared within a ComponentActivity or Fragment: ${propertyDecl.simpleName}")
+                return
             }
             if (parentClassDecl.isLocal()) {
                 logger.error("State marked with @Retain cannot be contained by local declaration, skipping $${propertyDecl.simpleName}")

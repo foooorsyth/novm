@@ -1,21 +1,18 @@
 plugins {
-    alias(libs.plugins.android.application)
+    alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
-    id("com.google.devtools.ksp") version "2.1.0-1.0.29"
 }
 
+
 android {
-    namespace = "com.forsyth.novm"
+    namespace = "com.forsyth.novm.sample"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.forsyth.novm"
-        minSdk = 24
-        targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        minSdk = 16
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles("consumer-rules.pro")
     }
 
     buildTypes {
@@ -36,15 +33,8 @@ android {
     }
 }
 
-ksp {
-    arg("foo", "${android.namespace}")
-}
-
 dependencies {
     implementation(project(":novm-runtime"))
-    implementation(project(":sample-lib"))
-    ksp(project(":novm-compiler"))
-    implementation(libs.androidx.fragment.ktx)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)

@@ -38,7 +38,31 @@ const val DEFAULT_STATE_SAVING_FRAGMENT_SIMPLE_NAME = "StateSavingFragment"
 
 class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : SymbolProcessor {
     var pass = 1
+    @OptIn(KspExperimental::class)
     override fun process(resolver: Resolver): List<KSAnnotated> {
+        val lib = resolver.getClassDeclarationByName("com.forsyth.novm.sample.LibraryActivity")
+        if (lib == null) {
+            logger.warn("mission failed")
+        } else {
+            logger.warn("lib is not null?")
+        }
+        logger.warn("lib decl size: ${lib?.declarations?.toList()?.size}")
+        lib?.declarations?.forEach { field ->
+            logger.warn("Field: ${field.simpleName.asString()}")
+            if (field.annotations.toList().isEmpty()) {
+                logger.warn("  No annotations found on this field")
+            } else {
+                field.annotations.forEach { annotation ->
+                    logger.warn("  Annotation: ${annotation.annotationType.resolve().declaration.qualifiedName?.asString()}")
+                }
+            }
+        }
+        resolver.getAllFiles().forEach { file ->
+            logger.warn("File: ${file.fileName}")
+            file.declarations.forEach { decl ->
+                logger.warn("Declaration: ${decl.simpleName.asString()}")
+            }
+        }
         // TODO get package, statesavingactivity name from ksp options
 //        val isStateSavingActivityWritten = resolver.getClassDeclarationByName("${DEFAULT_PACKAGE_NAME}.$DEFAULT_STATE_SAVING_ACTIVITY_SIMPLE_NAME") != null
 //        val isStateSavingFragmentWritten = resolver.getClassDeclarationByName("${DEFAULT_PACKAGE_NAME}.$DEFAULT_STATE_SAVING_FRAGMENT_SIMPLE_NAME") != null
@@ -53,6 +77,15 @@ class NoVMProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : S
         // TODO instead of checking if static files are generated, just check the classpath for them
         val retainSymbols =
             resolver.getSymbolsWithAnnotation(Retain::class.qualifiedName!!, false).toList()
+
+        val pkgsWAnn = resolver.getPackagesWithAnnotation(Retain::class.qualifiedName!!)
+        pkgsWAnn.toList().forEach {
+            logger.warn("pkg w ann: $it")
+        }
+        val pkgDecls = resolver.getDeclarationsFromPackage("com.forsyth.novm.sample")
+        pkgDecls.toList().forEach { decl ->
+            logger.warn("pkg dcl: ${decl.qualifiedName?.asString()}")
+        }
         val recheck = mutableListOf<KSAnnotated>()
         val componentToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>> =
             mutableMapOf()

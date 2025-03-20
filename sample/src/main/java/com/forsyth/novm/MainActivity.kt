@@ -2,9 +2,7 @@ package com.forsyth.novm
 
 
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.os.Bundle
-import android.widget.ImageView
 import android.widget.TextView
 import androidx.fragment.app.add
 import androidx.fragment.app.commit
@@ -28,14 +26,14 @@ class MainActivity : StateSavingActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         if (savedInstanceState == null) {
-            largeImage = BitmapFactory.decodeResource(resources, R.mipmap.oxide_grey_g80)
+            //largeImage = BitmapFactory.decodeResource(resources, R.mipmap.oxide_grey_g80)
             computedHash = fakeSha256()
             supportFragmentManager.commit {
                 setReorderingAllowed(true)
                 add<TestFragment>(R.id.fragment_container, tag = "uniqueTag")
             }
         }
-        findViewById<ImageView>(R.id.imageView).setImageBitmap(largeImage)
+        //findViewById<ImageView>(R.id.imageView).setImageBitmap(largeImage)
         findViewById<TextView>(R.id.tv_hash).text = computedHash
     }
 }

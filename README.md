@@ -68,6 +68,6 @@ novm supports apps with multiple modules. Library modules must declare themselve
 ```kotlin
 // top-level
 ksp {
-    arg("novm_isDependency", "true")
+    arg("novm.isDependency", "true")
 }
 ```

@@ -40,7 +40,7 @@ const val DEFAULT_DEPENDENCY_PACKAGE_NAME = "com.forsyth.novm.dependencies"
 const val DEPENCY_FILENAME_PROPERTY_PREFIX = "novm_"
 const val DEFAULT_STATE_SAVING_ACTIVITY_SIMPLE_NAME = "StateSavingActivity"
 const val DEFAULT_STATE_SAVING_FRAGMENT_SIMPLE_NAME = "StateSavingFragment"
-const val OPTION_IS_DEPENDENCY = "novm_isDependency"
+const val OPTION_IS_DEPENDENCY = "novm.isDependency"
 
 class NoVMProcessor(
     val codeGenerator: CodeGenerator,

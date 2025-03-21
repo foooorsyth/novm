@@ -5,7 +5,7 @@ plugins {
 }
 
 ksp {
-    arg("novm_isDependency", "true")
+    arg("novm.isDependency", "true")
 }
 
 android {

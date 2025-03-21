@@ -625,7 +625,7 @@ class NoVMProcessor(
             funBuilder.endControlFlow() // close CONTAINER_ID
             funBuilder.beginControlFlow("FragmentIdentificationStrategy.TAG -> {")
             funBuilder.beginControlFlow("if (component.tag == null) {")
-            funBuilder.addStatement("throw RuntimeException(\"identificationStrategy for instance of Fragment \${component::class.java.simpleName} is TAG but fragment.tag is null\")")
+            funBuilder.addStatement("throw RuntimeException(\"identificationStrategy for Fragment@\${Integer.toHexString(System.identityHashCode(component))} of type \${component::class.java.simpleName} is TAG but Fragment's tag field is null\")")
             funBuilder.endControlFlow() // close if
             funBuilder.addStatement(
                 "bundle.putBundle(${

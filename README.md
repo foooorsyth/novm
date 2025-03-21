@@ -66,7 +66,6 @@ Fragments are identified after recreation based on their ```identificationStrate
 
 novm supports apps with multiple modules. Library modules must declare themselves as dependencies in their build.gradle.kts file:
 ```kotlin
-// top-level
 ksp {
     arg("novm.isDependency", "true")
 }

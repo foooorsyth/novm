@@ -6,9 +6,11 @@
 First, [add the ksp plugin to your project](https://developer.android.com/build/migrate-to-ksp#add-ksp). 
 Then, add the novm runtime and compiler to your module's build.gradle.kts file:
 ```kotlin
-val novm_version = "0.8.0"
-implementation("com.forsyth.novm:novm-runtime:$novm_version")
-ksp("com.forsyth.novm:novm-compiler:$novm_version")
+dependencies {
+    val novm_version = "0.8.0"
+    implementation("com.forsyth.novm:novm-runtime:$novm_version")
+    ksp("com.forsyth.novm:novm-compiler:$novm_version")
+}
 ```
 
 Extend ```StateSavingActivity```, declare state directly in your Activity, and annotate it with ```@Retain```
@@ -34,6 +36,8 @@ class MainActivity : StateSavingActivity() {
 State that is designated to be retained across process death must be of a type supported by [Bundle](https://developer.android.com/reference/android/os/Bundle). 
 See [the docs](https://developer.android.com/topic/libraries/architecture/saving-states#onsaveinstancestate) for more guidance on
 state retention in the event of process death.
+
+All variables annotated with @Retain must be have ```public``` visibility.
 
 ### Fragment support
 
@@ -64,7 +68,8 @@ Fragments are identified after recreation based on their ```identificationStrate
 
 ### Multi-module Support
 
-novm supports apps with multiple modules. Library modules must declare themselves as dependencies in their build.gradle.kts file:
+novm supports apps with multiple modules. Library modules must declare themselves as dependencies in their build.gradle.kts file. 
+See ```:sample-lib``` and ```:sample-lib-another```:
 ```kotlin
 ksp {
     arg("novm.isDependency", "true")

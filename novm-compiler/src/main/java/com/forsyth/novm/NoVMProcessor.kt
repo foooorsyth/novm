@@ -14,6 +14,7 @@ import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
+import com.google.devtools.ksp.symbol.Modifier
 import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
@@ -579,7 +580,22 @@ class NoVMProcessor(
                     // TODO check bundlefunpostfix BEFORE codegen starts
                     val kvp = generateBundleKeyValuePair(ksPropertyDeclaration)
                     bundleKeyValuePairs[kvp.first] = kvp.second
-                    funBuilder.addStatement("bundle.put${bundleFunPostfixRet.postfix}(${kvp.first}, component.${ksPropertyDeclaration.simpleName.asString()})")
+                    // TODO handle lateinit in sscc
+                    // TODO extract this isInitialized check into its own function
+                    if (ksPropertyDeclaration.modifiers.contains(Modifier.LATEINIT)) {
+                        funBuilder.beginControlFlow("val isInitialized = try {")
+                        funBuilder.addStatement("component.${ksPropertyDeclaration.simpleName.asString()}")
+                        funBuilder.addStatement("true")
+                        funBuilder.endControlFlow()
+                        funBuilder.beginControlFlow("catch(ex: UninitializedPropertyAccessException) {")
+                        funBuilder.addStatement("false")
+                        funBuilder.endControlFlow()
+                        funBuilder.beginControlFlow("if (isInitialized) {")
+                        funBuilder.addStatement("bundle.put${bundleFunPostfixRet.postfix}(${kvp.first}, component.${ksPropertyDeclaration.simpleName.asString()})")
+                        funBuilder.endControlFlow()
+                    } else {
+                        funBuilder.addStatement("bundle.put${bundleFunPostfixRet.postfix}(${kvp.first}, component.${ksPropertyDeclaration.simpleName.asString()})")
+                    }
                 }
             funBuilder.endControlFlow() // close is (specific activity)
         }

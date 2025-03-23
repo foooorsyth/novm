@@ -10,13 +10,10 @@ interface StateSaver {
 }
 
 class EmptyStateSaver : StateSaver {
-    override fun saveStateConfigChange(component: Any): StateHolder {
-        return EmptyStateHolder()
-    }
-
-    override fun restoreStateConfigChange(component: Any, stateHolder: StateHolder) {}
-    override fun saveStateBundle(component: Any, bundle: Bundle) {}
-    override fun restoreStateBundle(component: Any, bundle: Bundle) {}
+    override fun saveStateConfigChange(component: Any): StateHolder { return EmptyStateHolder() }
+    override fun restoreStateConfigChange(component: Any, stateHolder: StateHolder) { }
+    override fun saveStateBundle(component: Any, bundle: Bundle) { }
+    override fun restoreStateBundle(component: Any, bundle: Bundle) { }
 }
 
 fun provideStateSaver(): StateSaver {

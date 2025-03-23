@@ -38,7 +38,7 @@ const val COMPONENT_ACTIVITY_QUALIFIED_NAME = "androidx.activity.ComponentActivi
 const val FRAGMENT_QUALIFIED_NAME = "androidx.fragment.app.Fragment"
 const val DEFAULT_PACKAGE_NAME = "com.forsyth.novm"
 const val DEFAULT_DEPENDENCY_PACKAGE_NAME = "com.forsyth.novm.dependencies"
-const val DEPENCY_FILENAME_PROPERTY_PREFIX = "novm_"
+const val DEPENDENCY_FILENAME_PROPERTY_PREFIX = "novm_"
 const val DEFAULT_STATE_SAVING_ACTIVITY_SIMPLE_NAME = "StateSavingActivity"
 const val DEFAULT_STATE_SAVING_FRAGMENT_SIMPLE_NAME = "StateSavingFragment"
 const val OPTION_IS_DEPENDENCY = "novm.isDependency"
@@ -131,9 +131,9 @@ class NoVMProcessor(
         }
         val takenFileNames = resolver.getDeclarationsFromPackage(DEFAULT_DEPENDENCY_PACKAGE_NAME)
             .filter {
-               it.simpleName.asString().startsWith(DEPENCY_FILENAME_PROPERTY_PREFIX)
+               it.simpleName.asString().startsWith(DEPENDENCY_FILENAME_PROPERTY_PREFIX)
             }
-            .map { it.simpleName.asString().substring(DEPENCY_FILENAME_PROPERTY_PREFIX.length) }
+            .map { it.simpleName.asString().substring(DEPENDENCY_FILENAME_PROPERTY_PREFIX.length) }
             .toSet()
         var randomFileName: String
         do {
@@ -156,7 +156,7 @@ class NoVMProcessor(
         fileBuilder
             .addProperty(
                 PropertySpec.builder(
-                    DEPENCY_FILENAME_PROPERTY_PREFIX + randomFileName, INT, KModifier.CONST
+                    DEPENDENCY_FILENAME_PROPERTY_PREFIX + randomFileName, INT, KModifier.CONST
                 )
                 .initializer("%L", "0")
                 .build()
@@ -578,16 +578,15 @@ class NoVMProcessor(
                         return@filteredForEach
                     }
                     // TODO check bundlefunpostfix BEFORE codegen starts
+                    funBuilder.beginControlFlow("run {")
                     val kvp = generateBundleKeyValuePair(ksPropertyDeclaration)
                     bundleKeyValuePairs[kvp.first] = kvp.second
-                    // TODO handle lateinit in sscc
-                    // TODO extract this isInitialized check into its own function
                     if (ksPropertyDeclaration.modifiers.contains(Modifier.LATEINIT)) {
                         funBuilder.beginControlFlow("val isInitialized = try {")
                         funBuilder.addStatement("component.${ksPropertyDeclaration.simpleName.asString()}")
                         funBuilder.addStatement("true")
                         funBuilder.endControlFlow()
-                        funBuilder.beginControlFlow("catch(ex: UninitializedPropertyAccessException) {")
+                        funBuilder.beginControlFlow("catch (ex: UninitializedPropertyAccessException) {")
                         funBuilder.addStatement("false")
                         funBuilder.endControlFlow()
                         funBuilder.beginControlFlow("if (isInitialized) {")
@@ -596,6 +595,7 @@ class NoVMProcessor(
                     } else {
                         funBuilder.addStatement("bundle.put${bundleFunPostfixRet.postfix}(${kvp.first}, component.${ksPropertyDeclaration.simpleName.asString()})")
                     }
+                    funBuilder.endControlFlow()
                 }
             funBuilder.endControlFlow() // close is (specific activity)
         }
@@ -620,7 +620,22 @@ class NoVMProcessor(
                     // TODO check bundlefunpostfix BEFORE codegen starts
                     val kvp = generateBundleKeyValuePair(ksPropertyDeclaration)
                     bundleKeyValuePairs[kvp.first] = kvp.second
-                    funBuilder.addStatement("fragBundle.put${bundleFunPostfixRet.postfix}(${kvp.first}, component.${ksPropertyDeclaration.simpleName.asString()})")
+                    funBuilder.beginControlFlow("run {")
+                    if (ksPropertyDeclaration.modifiers.contains(Modifier.LATEINIT)) {
+                        funBuilder.beginControlFlow("val isInitialized = try {")
+                        funBuilder.addStatement("component.${ksPropertyDeclaration.simpleName.asString()}")
+                        funBuilder.addStatement("true")
+                        funBuilder.endControlFlow()
+                        funBuilder.beginControlFlow("catch (ex: UninitializedPropertyAccessException) {")
+                        funBuilder.addStatement("false")
+                        funBuilder.endControlFlow()
+                        funBuilder.beginControlFlow("if (isInitialized) {")
+                        funBuilder.addStatement("fragBundle.put${bundleFunPostfixRet.postfix}(${kvp.first}, component.${ksPropertyDeclaration.simpleName.asString()})")
+                        funBuilder.endControlFlow()
+                    } else {
+                        funBuilder.addStatement("fragBundle.put${bundleFunPostfixRet.postfix}(${kvp.first}, component.${ksPropertyDeclaration.simpleName.asString()})")
+                    }
+                    funBuilder.endControlFlow()
                 }
 
             // TODO break this out into its own function for rsb
@@ -1072,11 +1087,28 @@ class NoVMProcessor(
                 ksPropertyDeclaration.getAnnotationsByType(Retain::class).toList()
                     .first().across.contains(StateDestroyingEvent.CONFIGURATION_CHANGE)
             }
-                .forEach { propertyDecl ->
-                    // during save, nullability doesn't matter
-                    funBuilder.addStatement(
-                        "stateHolder.$activityStateHolderFieldName!!.${propertyDecl.simpleName.asString()} = component.${propertyDecl.simpleName.asString()}"
-                    )
+                .forEach { ksPropertyDeclaration ->
+                    funBuilder.beginControlFlow("run {")
+                    if (ksPropertyDeclaration.modifiers.contains(Modifier.LATEINIT)) {
+                        funBuilder.beginControlFlow("val isInitialized = try {")
+                        funBuilder.addStatement("component.${ksPropertyDeclaration.simpleName.asString()}")
+                        funBuilder.addStatement("true")
+                        funBuilder.endControlFlow()
+                        funBuilder.beginControlFlow("catch (ex: UninitializedPropertyAccessException) {")
+                        funBuilder.addStatement("false")
+                        funBuilder.endControlFlow()
+                        funBuilder.beginControlFlow("if (isInitialized) {")
+                        funBuilder.addStatement(
+                            "stateHolder.$activityStateHolderFieldName!!.${ksPropertyDeclaration.simpleName.asString()} = component.${ksPropertyDeclaration.simpleName.asString()}"
+                        )
+                        funBuilder.endControlFlow()
+                    } else {
+                        // during save, nullability doesn't matter
+                        funBuilder.addStatement(
+                            "stateHolder.$activityStateHolderFieldName!!.${ksPropertyDeclaration.simpleName.asString()} = component.${ksPropertyDeclaration.simpleName.asString()}"
+                        )
+                    }
+                    funBuilder.endControlFlow()
                 }
             funBuilder.endControlFlow() // end is (specific activity)
         }
@@ -1098,11 +1130,28 @@ class NoVMProcessor(
             funBuilder.addStatement(
                 "stateHolder.$fragStateHolderFieldNameForClass = ${classDeclOfFrag.simpleName.asString()}State()"
             )
-            configChangeProps.forEach { propertyDecl ->
-                // during save, nullability doesn't matter
-                funBuilder.addStatement(
-                    "stateHolder.$fragStateHolderFieldNameForClass!!.${propertyDecl.simpleName.asString()} = component.${propertyDecl.simpleName.asString()}"
-                )
+            configChangeProps.forEach { ksPropertyDeclaration ->
+                // during save, nullability doesn't matter, but lateinit does
+                funBuilder.beginControlFlow("run {")
+                if (ksPropertyDeclaration.modifiers.contains(Modifier.LATEINIT)) {
+                    funBuilder.beginControlFlow("val isInitialized = try {")
+                    funBuilder.addStatement("component.${ksPropertyDeclaration.simpleName.asString()}")
+                    funBuilder.addStatement("true")
+                    funBuilder.endControlFlow()
+                    funBuilder.beginControlFlow("catch (ex: UninitializedPropertyAccessException) {")
+                    funBuilder.addStatement("false")
+                    funBuilder.endControlFlow()
+                    funBuilder.beginControlFlow("if (isInitialized) {")
+                    funBuilder.addStatement(
+                        "stateHolder.$fragStateHolderFieldNameForClass!!.${ksPropertyDeclaration.simpleName.asString()} = component.${ksPropertyDeclaration.simpleName.asString()}"
+                    )
+                    funBuilder.endControlFlow()
+                } else {
+                    funBuilder.addStatement(
+                        "stateHolder.$fragStateHolderFieldNameForClass!!.${ksPropertyDeclaration.simpleName.asString()} = component.${ksPropertyDeclaration.simpleName.asString()}"
+                    )
+                }
+                funBuilder.endControlFlow()
             }
             funBuilder.endControlFlow() // close is (CLASS)
             funBuilder.beginControlFlow("FragmentIdentificationStrategy.TAG -> {")
@@ -1115,11 +1164,28 @@ class NoVMProcessor(
             )
             funBuilder.endControlFlow()
             funBuilder.addStatement("val fragStateHolder = ${classDeclOfFrag.simpleName.asString()}State()")
-            configChangeProps.forEach { propertyDecl ->
+            configChangeProps.forEach { ksPropertyDeclaration ->
                 // during save, nullability doesn't matter
-                funBuilder.addStatement(
-                    "fragStateHolder.${propertyDecl.simpleName.asString()} = component.${propertyDecl.simpleName.asString()}"
-                )
+                funBuilder.beginControlFlow("run {")
+                if (ksPropertyDeclaration.modifiers.contains(Modifier.LATEINIT)) {
+                    funBuilder.beginControlFlow("val isInitialized = try {")
+                    funBuilder.addStatement("component.${ksPropertyDeclaration.simpleName.asString()}")
+                    funBuilder.addStatement("true")
+                    funBuilder.endControlFlow()
+                    funBuilder.beginControlFlow("catch (ex: UninitializedPropertyAccessException) {")
+                    funBuilder.addStatement("false")
+                    funBuilder.endControlFlow()
+                    funBuilder.beginControlFlow("if (isInitialized) {")
+                    funBuilder.addStatement(
+                        "stateHolder.$fragStateHolderFieldNameForClass!!.${ksPropertyDeclaration.simpleName.asString()} = component.${ksPropertyDeclaration.simpleName.asString()}"
+                    )
+                    funBuilder.endControlFlow()
+                } else {
+                    funBuilder.addStatement(
+                        "stateHolder.$fragStateHolderFieldNameForClass!!.${ksPropertyDeclaration.simpleName.asString()} = component.${ksPropertyDeclaration.simpleName.asString()}"
+                    )
+                }
+                funBuilder.endControlFlow()
             }
             funBuilder.addStatement(
                 "stateHolder.$fragStateHolderFieldNameForTag[component.tag!!] = fragStateHolder"
@@ -1129,11 +1195,28 @@ class NoVMProcessor(
             val fragStateHolderFieldNameForId =
                 "${lowercaseFirstLetter(classDeclOfFrag.simpleName.asString())}StateById"
             funBuilder.addStatement("val fragStateHolder = ${classDeclOfFrag.simpleName.asString()}State()")
-            configChangeProps.forEach { propertyDecl ->
+            configChangeProps.forEach { ksPropertyDeclaration ->
                 // during save, nullability doesn't matter
-                funBuilder.addStatement(
-                    "fragStateHolder.${propertyDecl.simpleName.asString()} = component.${propertyDecl.simpleName.asString()}"
-                )
+                funBuilder.beginControlFlow("run {")
+                if (ksPropertyDeclaration.modifiers.contains(Modifier.LATEINIT)) {
+                    funBuilder.beginControlFlow("val isInitialized = try {")
+                    funBuilder.addStatement("component.${ksPropertyDeclaration.simpleName.asString()}")
+                    funBuilder.addStatement("true")
+                    funBuilder.endControlFlow()
+                    funBuilder.beginControlFlow("catch (ex: UninitializedPropertyAccessException) {")
+                    funBuilder.addStatement("false")
+                    funBuilder.endControlFlow()
+                    funBuilder.beginControlFlow("if (isInitialized) {")
+                    funBuilder.addStatement(
+                        "stateHolder.$fragStateHolderFieldNameForClass!!.${ksPropertyDeclaration.simpleName.asString()} = component.${ksPropertyDeclaration.simpleName.asString()}"
+                    )
+                    funBuilder.endControlFlow()
+                } else {
+                    funBuilder.addStatement(
+                        "stateHolder.$fragStateHolderFieldNameForClass!!.${ksPropertyDeclaration.simpleName.asString()} = component.${ksPropertyDeclaration.simpleName.asString()}"
+                    )
+                }
+                funBuilder.endControlFlow()
             }
             funBuilder.addStatement(
                 "stateHolder.$fragStateHolderFieldNameForId[component.id] = fragStateHolder"

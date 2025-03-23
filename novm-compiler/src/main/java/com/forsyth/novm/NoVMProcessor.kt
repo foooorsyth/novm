@@ -13,6 +13,7 @@ import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
+import com.google.devtools.ksp.symbol.KSNode
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import com.google.devtools.ksp.symbol.Modifier
 import com.squareup.kotlinpoet.AnnotationSpec
@@ -42,6 +43,7 @@ const val DEPENDENCY_FILENAME_PROPERTY_PREFIX = "novm_"
 const val DEFAULT_STATE_SAVING_ACTIVITY_SIMPLE_NAME = "StateSavingActivity"
 const val DEFAULT_STATE_SAVING_FRAGMENT_SIMPLE_NAME = "StateSavingFragment"
 const val OPTION_IS_DEPENDENCY = "novm.isDependency"
+const val OPTION_DEBUG_LOGGING = "novm.debugLogging"
 
 class NoVMProcessor(
     val codeGenerator: CodeGenerator,
@@ -51,7 +53,7 @@ class NoVMProcessor(
     var hasWrittenDynamic = false
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
-        val isLibrary = options.containsKey(OPTION_IS_DEPENDENCY) && options[OPTION_IS_DEPENDENCY]!!.lowercase() == "true"
+        val isLibrary = options[OPTION_IS_DEPENDENCY]?.lowercase() == "true"
         val ret = if (isLibrary) {
             processDependency(resolver)
         } else {
@@ -61,6 +63,16 @@ class NoVMProcessor(
         return ret
     }
 
+    fun logd(message: String, ksNode: KSNode? = null) {
+        if (options[OPTION_DEBUG_LOGGING]?.lowercase() == "true") {
+            logger.warn(message, ksNode)
+        }
+    }
+    
+    fun loge(message: String, ksNode: KSNode? = null) {
+        logger.error(message, ksNode)
+    }
+    
     @OptIn(KspExperimental::class)
     private fun processApp(resolver: Resolver) : List<KSAnnotated> {
         val pkgDecls = resolver.getDeclarationsFromPackage(DEFAULT_DEPENDENCY_PACKAGE_NAME)
@@ -69,13 +81,13 @@ class NoVMProcessor(
             .filterIsInstance(KSPropertyDeclaration::class.java)
             .map { it.simpleName.asString().replace('_', '.') }
             .map { pkgContainingRetains ->
-                logger.warn("pkgContainingRetains: $pkgContainingRetains")
+                logd("pkgContainingRetains: $pkgContainingRetains")
                 val redirPkgDecls = resolver.getDeclarationsFromPackage(pkgContainingRetains)
                 // Only declarations at the top level of the package -- not property decls inside of classes
                 // need to recursively search
-                logger.warn("redirPkgDecl size: ${redirPkgDecls.toList().size}")
+                logd("redirPkgDecl size: ${redirPkgDecls.toList().size}")
                 redirPkgDecls.toList().forEach { redirPkgDecl ->
-                    logger.warn("all decls: " + redirPkgDecl.qualifiedName!!.asString())
+                    logd("all decls: " + redirPkgDecl.qualifiedName!!.asString())
 
                 }
                 redirPkgDecls
@@ -89,21 +101,21 @@ class NoVMProcessor(
                 ksClassDeclaration
                     .getDeclaredProperties()
                     .filter { ksPropertyDeclaration -> ksPropertyDeclaration.isAnnotationPresent(Retain::class) }
-                    .map { ksPropertyDeclaration -> ksPropertyDeclaration as KSAnnotated }
+                    .map { ksPropertyDeclaration -> ksPropertyDeclaration }
                     .toList()
             )
         }
-        logger.warn("dcls in libs: ${pkgDecls.toList().size}")
-        logger.warn("retain symbols from libs: ${retainSymbols.size}")
+        logd("dcls in libs: ${pkgDecls.toList().size}")
+        logd("retain symbols from libs: ${retainSymbols.size}")
         // TODO get package, statesavingactivity name from ksp options
 //        val isStateSavingActivityWritten = resolver.getClassDeclarationByName("${DEFAULT_PACKAGE_NAME}.$DEFAULT_STATE_SAVING_ACTIVITY_SIMPLE_NAME") != null
 //        val isStateSavingFragmentWritten = resolver.getClassDeclarationByName("${DEFAULT_PACKAGE_NAME}.$DEFAULT_STATE_SAVING_FRAGMENT_SIMPLE_NAME") != null
 //        if (!isStateSavingActivityWritten) {
-//            logger.warn("generating ssactivity, pass $pass")
+//            logd("generating ssactivity, pass $pass")
 //            generateStateSavingActivityFile(DEFAULT_PACKAGE_NAME).writeTo(codeGenerator, Dependencies(true))
 //        }
 //        if (!isStateSavingFragmentWritten) {
-//            logger.warn("generating ssfragment, pass $pass")
+//            logd("generating ssfragment, pass $pass")
 //            generateStateSavingFragmentFile(DEFAULT_PACKAGE_NAME).writeTo(codeGenerator, Dependencies(true))
 //        }
         // TODO instead of checking if static files are generated, just check the classpath for them
@@ -120,7 +132,7 @@ class NoVMProcessor(
             generateDynamicCode(resolver, componentToStateMap)
             hasWrittenDynamic = true
         }
-        logger.warn("sizeof recheck: ${recheck.size}, pass: $pass")
+        logd("sizeof recheck: ${recheck.size}, pass: $pass")
         return recheck
     }
 
@@ -194,40 +206,40 @@ class NoVMProcessor(
         recheck: MutableList<KSAnnotated>,
         componentToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>>
     ) {
-        logger.warn("ensureSupported#pass: $pass")
+        logd("ensureSupported#pass: $pass")
         retainSymbols.forEach { retainNode: KSAnnotated ->
             val propertyDecl = retainNode as? KSPropertyDeclaration
             
             if (propertyDecl == null) {
-                logger.error("State marked with @Retain must annotate a property declaration, skipping...")
+                loge("State marked with @Retain must annotate a property declaration, skipping...")
                 return@forEach
             }
             if (!propertyDecl.isMutable) {
-                logger.error("State marked with @Retain must be mutable")
+                loge("State marked with @Retain must be mutable")
                 return@forEach
             }
             if (propertyDecl.parentDeclaration == null) {
-                logger.error("State marked with @Retain cannot be declared at top level, skipping ${propertyDecl.simpleName}")
+                loge("State marked with @Retain cannot be declared at top level, skipping ${propertyDecl.simpleName}")
                 return@forEach
             }
             val parentClassDecl = propertyDecl.parentDeclaration as? KSClassDeclaration
             if (parentClassDecl == null) {
                 // TODO handle hostOf / hostedBy
-                logger.error("State marked with @Retain must be declared within a ComponentActivity or Fragment, skipping ${propertyDecl.simpleName}")
+                loge("State marked with @Retain must be declared within a ComponentActivity or Fragment, skipping ${propertyDecl.simpleName}")
                 return@forEach
             }
-            logger.warn("ensureSupported#classDecl: ${parentClassDecl.qualifiedName!!.asString()}")
+            logd("ensureSupported#classDecl: ${parentClassDecl.qualifiedName!!.asString()}")
             val isSubclassOfComponentActivity =
                 isSubclassOf(parentClassDecl, COMPONENT_ACTIVITY_QUALIFIED_NAME)
             val isSubclassOfFragment = isSubclassOf(parentClassDecl, FRAGMENT_QUALIFIED_NAME)
-            logger.warn("ensureSupported#isSubAct?: $isSubclassOfComponentActivity")
-            logger.warn("ensureSupported#isSubFrag?: $isSubclassOfFragment")
+            logd("ensureSupported#isSubAct?: $isSubclassOfComponentActivity")
+            logd("ensureSupported#isSubFrag?: $isSubclassOfFragment")
             if (!isSubclassOfComponentActivity && !isSubclassOfFragment) {
-                logger.error("State marked with @Retain must be declared within a ComponentActivity or Fragment: ${propertyDecl.simpleName}")
+                loge("State marked with @Retain must be declared within a ComponentActivity or Fragment: ${propertyDecl.simpleName}")
                 return
             }
             if (parentClassDecl.isLocal()) {
-                logger.error("State marked with @Retain cannot be contained by local declaration, skipping $${propertyDecl.simpleName}")
+                loge("State marked with @Retain cannot be contained by local declaration, skipping $${propertyDecl.simpleName}")
                 return@forEach
             }
             if (!componentToStateMap.contains(parentClassDecl.qualifiedName!!.asString())) {
@@ -574,14 +586,14 @@ class NoVMProcessor(
                 .forEach filteredForEach@{ ksPropertyDeclaration ->
                     val bundleFunPostfixRet = getBundleFunPostfix(resolver, ksPropertyDeclaration)
                     if (bundleFunPostfixRet.category == BundleFunPostfixCategory.NOT_APPLICABLE) {
-                        logger.error("State ${ksPropertyDeclaration.simpleName.asString()} is marked to be retained across PROCESS_DEATH but is not a type supported by Bundle")
+                        loge("State ${ksPropertyDeclaration.simpleName.asString()} is marked to be retained across PROCESS_DEATH but is not a type supported by Bundle")
                         return@filteredForEach
                     }
                     // TODO check bundlefunpostfix BEFORE codegen starts
-                    funBuilder.beginControlFlow("run {")
                     val kvp = generateBundleKeyValuePair(ksPropertyDeclaration)
                     bundleKeyValuePairs[kvp.first] = kvp.second
                     if (ksPropertyDeclaration.modifiers.contains(Modifier.LATEINIT)) {
+                        funBuilder.beginControlFlow("run {")
                         funBuilder.beginControlFlow("val isInitialized = try {")
                         funBuilder.addStatement("component.${ksPropertyDeclaration.simpleName.asString()}")
                         funBuilder.addStatement("true")
@@ -592,10 +604,10 @@ class NoVMProcessor(
                         funBuilder.beginControlFlow("if (isInitialized) {")
                         funBuilder.addStatement("bundle.put${bundleFunPostfixRet.postfix}(${kvp.first}, component.${ksPropertyDeclaration.simpleName.asString()})")
                         funBuilder.endControlFlow()
+                        funBuilder.endControlFlow()
                     } else {
                         funBuilder.addStatement("bundle.put${bundleFunPostfixRet.postfix}(${kvp.first}, component.${ksPropertyDeclaration.simpleName.asString()})")
                     }
-                    funBuilder.endControlFlow()
                 }
             funBuilder.endControlFlow() // close is (specific activity)
         }
@@ -614,14 +626,14 @@ class NoVMProcessor(
                 .forEach filteredForEach@{ ksPropertyDeclaration ->
                     val bundleFunPostfixRet = getBundleFunPostfix(resolver, ksPropertyDeclaration)
                     if (bundleFunPostfixRet.category == BundleFunPostfixCategory.NOT_APPLICABLE) {
-                        logger.error("State ${ksPropertyDeclaration.simpleName.asString()} is marked to be retained across PROCESS_DEATH but is not a type supported by Bundle")
+                        loge("State ${ksPropertyDeclaration.simpleName.asString()} is marked to be retained across PROCESS_DEATH but is not a type supported by Bundle")
                         return@filteredForEach
                     }
                     // TODO check bundlefunpostfix BEFORE codegen starts
                     val kvp = generateBundleKeyValuePair(ksPropertyDeclaration)
                     bundleKeyValuePairs[kvp.first] = kvp.second
-                    funBuilder.beginControlFlow("run {")
                     if (ksPropertyDeclaration.modifiers.contains(Modifier.LATEINIT)) {
+                        funBuilder.beginControlFlow("run {")
                         funBuilder.beginControlFlow("val isInitialized = try {")
                         funBuilder.addStatement("component.${ksPropertyDeclaration.simpleName.asString()}")
                         funBuilder.addStatement("true")
@@ -632,10 +644,10 @@ class NoVMProcessor(
                         funBuilder.beginControlFlow("if (isInitialized) {")
                         funBuilder.addStatement("fragBundle.put${bundleFunPostfixRet.postfix}(${kvp.first}, component.${ksPropertyDeclaration.simpleName.asString()})")
                         funBuilder.endControlFlow()
+                        funBuilder.endControlFlow()
                     } else {
                         funBuilder.addStatement("fragBundle.put${bundleFunPostfixRet.postfix}(${kvp.first}, component.${ksPropertyDeclaration.simpleName.asString()})")
                     }
-                    funBuilder.endControlFlow()
                 }
 
             // TODO break this out into its own function for rsb
@@ -757,7 +769,7 @@ class NoVMProcessor(
                         }
 
                         BundleFunPostfixCategory.NOT_APPLICABLE -> {
-                            logger.error("State ${ksPropertyDeclaration.simpleName.asString()} is marked to be retained across PROCESS_DEATH but is not a type supported by Bundle")
+                            loge("State ${ksPropertyDeclaration.simpleName.asString()} is marked to be retained across PROCESS_DEATH but is not a type supported by Bundle")
                             return@filteredForEach
                         }
                     }
@@ -836,7 +848,7 @@ class NoVMProcessor(
                         }
 
                         BundleFunPostfixCategory.NOT_APPLICABLE -> {
-                            logger.error("State ${ksPropertyDeclaration.simpleName.asString()} is marked to be retained across PROCESS_DEATH but is not a type supported by Bundle")
+                            loge("State ${ksPropertyDeclaration.simpleName.asString()} is marked to be retained across PROCESS_DEATH but is not a type supported by Bundle")
                             return@filteredForEach
                         }
                     }
@@ -1088,8 +1100,8 @@ class NoVMProcessor(
                     .first().across.contains(StateDestroyingEvent.CONFIGURATION_CHANGE)
             }
                 .forEach { ksPropertyDeclaration ->
-                    funBuilder.beginControlFlow("run {")
                     if (ksPropertyDeclaration.modifiers.contains(Modifier.LATEINIT)) {
+                        funBuilder.beginControlFlow("run {")
                         funBuilder.beginControlFlow("val isInitialized = try {")
                         funBuilder.addStatement("component.${ksPropertyDeclaration.simpleName.asString()}")
                         funBuilder.addStatement("true")
@@ -1102,13 +1114,13 @@ class NoVMProcessor(
                             "stateHolder.$activityStateHolderFieldName!!.${ksPropertyDeclaration.simpleName.asString()} = component.${ksPropertyDeclaration.simpleName.asString()}"
                         )
                         funBuilder.endControlFlow()
+                        funBuilder.endControlFlow()
                     } else {
                         // during save, nullability doesn't matter
                         funBuilder.addStatement(
                             "stateHolder.$activityStateHolderFieldName!!.${ksPropertyDeclaration.simpleName.asString()} = component.${ksPropertyDeclaration.simpleName.asString()}"
                         )
                     }
-                    funBuilder.endControlFlow()
                 }
             funBuilder.endControlFlow() // end is (specific activity)
         }
@@ -1132,8 +1144,8 @@ class NoVMProcessor(
             )
             configChangeProps.forEach { ksPropertyDeclaration ->
                 // during save, nullability doesn't matter, but lateinit does
-                funBuilder.beginControlFlow("run {")
                 if (ksPropertyDeclaration.modifiers.contains(Modifier.LATEINIT)) {
+                    funBuilder.beginControlFlow("run {")
                     funBuilder.beginControlFlow("val isInitialized = try {")
                     funBuilder.addStatement("component.${ksPropertyDeclaration.simpleName.asString()}")
                     funBuilder.addStatement("true")
@@ -1146,12 +1158,12 @@ class NoVMProcessor(
                         "stateHolder.$fragStateHolderFieldNameForClass!!.${ksPropertyDeclaration.simpleName.asString()} = component.${ksPropertyDeclaration.simpleName.asString()}"
                     )
                     funBuilder.endControlFlow()
+                    funBuilder.endControlFlow()
                 } else {
                     funBuilder.addStatement(
                         "stateHolder.$fragStateHolderFieldNameForClass!!.${ksPropertyDeclaration.simpleName.asString()} = component.${ksPropertyDeclaration.simpleName.asString()}"
                     )
                 }
-                funBuilder.endControlFlow()
             }
             funBuilder.endControlFlow() // close is (CLASS)
             funBuilder.beginControlFlow("FragmentIdentificationStrategy.TAG -> {")
@@ -1166,8 +1178,8 @@ class NoVMProcessor(
             funBuilder.addStatement("val fragStateHolder = ${classDeclOfFrag.simpleName.asString()}State()")
             configChangeProps.forEach { ksPropertyDeclaration ->
                 // during save, nullability doesn't matter
-                funBuilder.beginControlFlow("run {")
                 if (ksPropertyDeclaration.modifiers.contains(Modifier.LATEINIT)) {
+                    funBuilder.beginControlFlow("run {")
                     funBuilder.beginControlFlow("val isInitialized = try {")
                     funBuilder.addStatement("component.${ksPropertyDeclaration.simpleName.asString()}")
                     funBuilder.addStatement("true")
@@ -1180,12 +1192,12 @@ class NoVMProcessor(
                         "stateHolder.$fragStateHolderFieldNameForClass!!.${ksPropertyDeclaration.simpleName.asString()} = component.${ksPropertyDeclaration.simpleName.asString()}"
                     )
                     funBuilder.endControlFlow()
+                    funBuilder.endControlFlow()
                 } else {
                     funBuilder.addStatement(
                         "stateHolder.$fragStateHolderFieldNameForClass!!.${ksPropertyDeclaration.simpleName.asString()} = component.${ksPropertyDeclaration.simpleName.asString()}"
                     )
                 }
-                funBuilder.endControlFlow()
             }
             funBuilder.addStatement(
                 "stateHolder.$fragStateHolderFieldNameForTag[component.tag!!] = fragStateHolder"
@@ -1197,8 +1209,8 @@ class NoVMProcessor(
             funBuilder.addStatement("val fragStateHolder = ${classDeclOfFrag.simpleName.asString()}State()")
             configChangeProps.forEach { ksPropertyDeclaration ->
                 // during save, nullability doesn't matter
-                funBuilder.beginControlFlow("run {")
                 if (ksPropertyDeclaration.modifiers.contains(Modifier.LATEINIT)) {
+                    funBuilder.beginControlFlow("run {")
                     funBuilder.beginControlFlow("val isInitialized = try {")
                     funBuilder.addStatement("component.${ksPropertyDeclaration.simpleName.asString()}")
                     funBuilder.addStatement("true")
@@ -1211,12 +1223,12 @@ class NoVMProcessor(
                         "stateHolder.$fragStateHolderFieldNameForClass!!.${ksPropertyDeclaration.simpleName.asString()} = component.${ksPropertyDeclaration.simpleName.asString()}"
                     )
                     funBuilder.endControlFlow()
+                    funBuilder.endControlFlow()
                 } else {
                     funBuilder.addStatement(
                         "stateHolder.$fragStateHolderFieldNameForClass!!.${ksPropertyDeclaration.simpleName.asString()} = component.${ksPropertyDeclaration.simpleName.asString()}"
                     )
                 }
-                funBuilder.endControlFlow()
             }
             funBuilder.addStatement(
                 "stateHolder.$fragStateHolderFieldNameForId[component.id] = fragStateHolder"
@@ -1367,8 +1379,7 @@ class NoVMProcessor(
                             }
 
                             else -> {
-                                logger.warn("unsupported type")
-                                logger.error("unsupported type")
+                                loge("unsupported type ${resolvedType.toClassName().canonicalName}")
                             }
                         }
                     }

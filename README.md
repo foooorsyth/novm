@@ -79,26 +79,26 @@ ksp {
 
 | Bundle Type           | Supported by novm? |
 |-----------------------|--------------------|
-| IBinder               | - [ ]              |
-| Bundle                | - [x]              |
-| Byte                  | - [x]              |
-| ByteArray             | - [x]              |
-| Char                  | - [x]              |
-| CharArray             | - [x]              |
-| CharSequence          | - [ ]              |
-| CharSequenceArray     | - [ ]              |
-| CharSequenceArrayList | - [ ]              |
-| Float                 | - [x]              |
-| FloatArray            | - [x]              |
-| IntArray              | - [x]              |
-| ArrayList<Int>        | - [x]              |
-| Parcelable            | - [x]              |
-| Serializable          | - [x]              |
-| Short                 | - [x]              |
-| ShortArray            | - [x]              |
-| Size                  | - [ ]              |
-| SizeF                 | - [ ]              |
-| SparseParcelableArray | - [ ]              |
-| Array<String>         | - [x]              |
-| ArrayList<String>     | - [x]              |
+| IBinder               | :x:              |
+| Bundle                | :white_check_mark:              |
+| Byte                  | :white_check_mark:              |
+| ByteArray             | :white_check_mark:              |
+| Char                  | :white_check_mark:              |
+| CharArray             | :white_check_mark:              |
+| CharSequence          | :x:              |
+| CharSequenceArray     | :x:              |
+| CharSequenceArrayList | :x:              |
+| Float                 | :white_check_mark:              |
+| FloatArray            | :white_check_mark:              |
+| IntArray              | :white_check_mark:              |
+| ArrayList<Int>        | :white_check_mark:              |
+| Parcelable            | :white_check_mark:              |
+| Serializable          | :white_check_mark:              |
+| Short                 | :white_check_mark:              |
+| ShortArray            | :white_check_mark:              |
+| Size                  | :x:              |
+| SizeF                 | :x:              |
+| SparseParcelableArray | :x:              |
+| Array<String>         | :white_check_mark:              |
+| ArrayList<String>     | :white_check_mark:              |
 

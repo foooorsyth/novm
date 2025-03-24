@@ -13,8 +13,8 @@
         android:theme="@style/Theme.NoVM"
         tools:targetApi="31">
         <activity
-            android:name=".MainActivity"
-            android:exported="true">
+            android:name=".BundleSupportedTypesActivity"
+            android:exported="true" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -22,13 +22,16 @@
             </intent-filter>
         </activity>
         <activity
-            android:name="com.forsyth.novm.sample.LibraryActivity"
-            android:exported="true"
-            />
+            android:name=".MainActivity"
+            android:exported="true">
+
+        </activity>
         <activity
-            android:name="com.forsyth.novm.sample2.AnotherLibraryActivity"
-            android:exported="true"
-            />
+            android:name=".sample.LibraryActivity"
+            android:exported="true" />
+        <activity
+            android:name=".sample2.AnotherLibraryActivity"
+            android:exported="true" />
     </application>
 
 </manifest>

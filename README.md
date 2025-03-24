@@ -34,7 +34,7 @@ class MainActivity : StateSavingActivity() {
 ```
 
 State that is designated to be retained across process death must be of a type supported by [Bundle](https://developer.android.com/reference/android/os/Bundle). 
-See [the docs](https://developer.android.com/topic/libraries/architecture/saving-states#onsaveinstancestate) for more guidance on
+See the [chart below](#Supported-types-for-retention-across-process-death) for supported types. See [the docs](https://developer.android.com/topic/libraries/architecture/saving-states#onsaveinstancestate) for more guidance on
 state retention in the event of process death.
 
 All variables annotated with @Retain must be have ```public``` visibility.
@@ -74,3 +74,31 @@ ksp {
     arg("novm.isDependency", "true")
 }
 ```
+
+### Supported types for retention across process death
+
+| Bundle Type           | Supported by novm? |
+|-----------------------|--------------------|
+| IBinder               | [ ]                |
+| Bundle                | [x]                |
+| Byte                  | [x]                |
+| ByteArray             | [x]                |
+| Char                  | [x]                |
+| CharArray             | [x]                |
+| CharSequence          | [ ]                |
+| CharSequenceArray     | [ ]                |
+| CharSequenceArrayList | [ ]                |
+| Float                 | [x]                |
+| FloatArray            | [x]                |
+| IntArray              | [x]                |
+| ArrayList<Int>        | [x]                |
+| Parcelable            | [x]                |
+| Serializable          | [x]                |
+| Short                 | [x]                |
+| ShortArray            | [x]                |
+| Size                  | [ ]                |
+| SizeF                 | [ ]                |
+| SparseParcelableArray | [ ]                |
+| Array<String>         | [x]                |
+| ArrayList<String>     | [x]                |
+

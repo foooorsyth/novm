@@ -25,7 +25,7 @@ class TestFragment : StateSavingFragment() {
     }
 
     companion object {
-        const val TAG = "TestFragment"
+        private const val TAG = "TestFragment"
 
         @JvmStatic
         fun newInstance() = TestFragment()

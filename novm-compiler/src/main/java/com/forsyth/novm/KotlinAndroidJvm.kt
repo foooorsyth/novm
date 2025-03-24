@@ -1,5 +1,6 @@
 package com.forsyth.novm
 
+import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
@@ -93,7 +94,11 @@ data class BundleFunPostfixRet(
     val category: BundleFunPostfixCategory
 )
 
-fun getBundleFunPostfix(resolver: Resolver, ksType: KSType): BundleFunPostfixRet {
+fun getBundleFunPostfix(
+    resolver: Resolver,
+    ksType: KSType,
+    logger: KSPLogger? = null,
+    isDebugLoggingEnabled: Boolean? = false): BundleFunPostfixRet {
     // eg. primitive, nullable non primitive, or subclass of serializable / parcel
     // also maybe return the nullability of the type
     val primStr = getBundleFunPostfixForPrimitive(resolver, ksType)
@@ -120,7 +125,7 @@ fun getBundleFunPostfix(resolver: Resolver, ksType: KSType): BundleFunPostfixRet
             BundleFunPostfixCategory.NOT_APPLICABLE
         )
     }
-    if (isSubclassOf(classDecl, "java.io.Serializable")) {
+    if (isSubclassOf(classDecl, "java.io.Serializable", logger, isDebugLoggingEnabled)) {
         return BundleFunPostfixRet(
             "Serializable",
             BundleFunPostfixCategory.SUBCLASS_SERIALIZABLE_OR_PARCELABLE
@@ -129,7 +134,7 @@ fun getBundleFunPostfix(resolver: Resolver, ksType: KSType): BundleFunPostfixRet
     // NOTE: Bundle and Persistable Bundle are Parcelable so they must be handled before we reach here
     // we won't support PersistableBundle (via putALL) because there's no corollary get function
     // we will only support putBundle/getBundle
-    if (isSubclassOf(classDecl, "android.os.Parcelable")) {
+    if (isSubclassOf(classDecl, "android.os.Parcelable", logger, isDebugLoggingEnabled)) {
         return BundleFunPostfixRet(
             "Parcelable",
             BundleFunPostfixCategory.SUBCLASS_SERIALIZABLE_OR_PARCELABLE
@@ -143,9 +148,11 @@ fun getBundleFunPostfix(resolver: Resolver, ksType: KSType): BundleFunPostfixRet
 
 fun getBundleFunPostfix(
     resolver: Resolver,
-    ksPropertyDeclaration: KSPropertyDeclaration
+    ksPropertyDeclaration: KSPropertyDeclaration,
+    logger: KSPLogger? = null,
+    isDebugLoggingEnabled: Boolean? = false
 ): BundleFunPostfixRet {
-    return getBundleFunPostfix(resolver, ksPropertyDeclaration.type.resolve())
+    return getBundleFunPostfix(resolver, ksPropertyDeclaration.type.resolve(), logger, isDebugLoggingEnabled)
 }
 
 fun isBuiltInWithDefaultValue(resolver: Resolver, ksType: KSType): Boolean {
@@ -169,9 +176,18 @@ fun isBuiltInWithDefaultValue(resolver: Resolver, ksType: KSType): Boolean {
     }
 }
 
-fun isSubclassOf(classDecl: KSClassDeclaration, qualifiedNameOfSuper: String): Boolean {
+fun isSubclassOf(classDecl: KSClassDeclaration,
+                 qualifiedNameOfSuper: String,
+                 logger: KSPLogger? = null,
+                 isDebugLoggingEnabled: Boolean? = false
+                 ): Boolean {
+
     val superTypeClassDecls = classDecl.superTypes.toList()
         .mapNotNull { ksTypeReference -> ksTypeReference.resolve().declaration as? KSClassDeclaration }
+    glogd(logger, isDebugLoggingEnabled, "${classDecl.qualifiedName?.asString()} isSubclassOf supertypes: ${superTypeClassDecls.toList()}")
+    if (classDecl.qualifiedName?.asString() == qualifiedNameOfSuper) {
+        return true
+    }
     if (superTypeClassDecls.isEmpty()) {
         return false
     }
@@ -180,6 +196,6 @@ fun isSubclassOf(classDecl: KSClassDeclaration, qualifiedNameOfSuper: String): B
     }
     // recursively try supertypes
     return superTypeClassDecls
-        .map { classDeclInterior -> isSubclassOf(classDeclInterior, qualifiedNameOfSuper) }
+        .map { classDeclInterior -> isSubclassOf(classDeclInterior, qualifiedNameOfSuper, logger, isDebugLoggingEnabled) }
         .reduce { acc, b -> acc || b }
 }

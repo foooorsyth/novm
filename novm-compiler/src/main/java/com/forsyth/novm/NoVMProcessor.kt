@@ -45,14 +45,33 @@ const val DEFAULT_STATE_SAVING_FRAGMENT_SIMPLE_NAME = "StateSavingFragment"
 const val OPTION_IS_DEPENDENCY = "novm.isDependency"
 const val OPTION_DEBUG_LOGGING = "novm.debugLogging"
 
+fun msgNotSupportedByBundle(clazz: String, field: String) : String {
+    return "State $clazz#$field is marked to be retained across PROCESS_DEATH but is not a type supported by Bundle"
+}
+
+fun glogd(logger: KSPLogger?, isDebugLoggingEnabled: Boolean?, msg: String, ksNode: KSNode? = null) {
+    if (logger == null) {
+        return
+    }
+    if (isDebugLoggingEnabled == true) {
+        logger.warn(msg, ksNode)
+    }
+}
+
+fun gloge(logger: KSPLogger?, msg: String, ksNode: KSNode? = null) {
+   logger?.error(msg, ksNode)
+}
+
 class NoVMProcessor(
     val codeGenerator: CodeGenerator,
     val options: Map<String, String>,
     val logger: KSPLogger) : SymbolProcessor {
     var pass = 1
     var hasWrittenDynamic = false
+    var isDebugLoggingEnabled: Boolean = false
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
+        isDebugLoggingEnabled = options[OPTION_DEBUG_LOGGING]?.lowercase() == "true"
         val isLibrary = options[OPTION_IS_DEPENDENCY]?.lowercase() == "true"
         val ret = if (isLibrary) {
             processDependency(resolver)
@@ -64,7 +83,7 @@ class NoVMProcessor(
     }
 
     fun logd(message: String, ksNode: KSNode? = null) {
-        if (options[OPTION_DEBUG_LOGGING]?.lowercase() == "true") {
+        if (isDebugLoggingEnabled) {
             logger.warn(message, ksNode)
         }
     }
@@ -584,9 +603,9 @@ class NoVMProcessor(
                         .first().across.contains(StateDestroyingEvent.PROCESS_DEATH)
                 }
                 .forEach filteredForEach@{ ksPropertyDeclaration ->
-                    val bundleFunPostfixRet = getBundleFunPostfix(resolver, ksPropertyDeclaration)
+                    val bundleFunPostfixRet = getBundleFunPostfix(resolver, ksPropertyDeclaration, logger, isDebugLoggingEnabled)
                     if (bundleFunPostfixRet.category == BundleFunPostfixCategory.NOT_APPLICABLE) {
-                        loge("State ${ksPropertyDeclaration.simpleName.asString()} is marked to be retained across PROCESS_DEATH but is not a type supported by Bundle")
+                        loge(msgNotSupportedByBundle(activityToStateEntry.key, ksPropertyDeclaration.simpleName.asString()))
                         return@filteredForEach
                     }
                     // TODO check bundlefunpostfix BEFORE codegen starts
@@ -624,9 +643,9 @@ class NoVMProcessor(
                         .first().across.contains(StateDestroyingEvent.PROCESS_DEATH)
                 }
                 .forEach filteredForEach@{ ksPropertyDeclaration ->
-                    val bundleFunPostfixRet = getBundleFunPostfix(resolver, ksPropertyDeclaration)
+                    val bundleFunPostfixRet = getBundleFunPostfix(resolver, ksPropertyDeclaration, logger, isDebugLoggingEnabled)
                     if (bundleFunPostfixRet.category == BundleFunPostfixCategory.NOT_APPLICABLE) {
-                        loge("State ${ksPropertyDeclaration.simpleName.asString()} is marked to be retained across PROCESS_DEATH but is not a type supported by Bundle")
+                        loge(msgNotSupportedByBundle(fragmentToStateEntry.key, ksPropertyDeclaration.simpleName.asString()))
                         return@filteredForEach
                     }
                     // TODO check bundlefunpostfix BEFORE codegen starts
@@ -737,7 +756,7 @@ class NoVMProcessor(
                 .forEach filteredForEach@{ ksPropertyDeclaration ->
                     val resolvedType = ksPropertyDeclaration.type.resolve()
                     val key = generateBundleKeyValuePair(ksPropertyDeclaration).first
-                    val bundleFunPostfixRet = getBundleFunPostfix(resolver, resolvedType)
+                    val bundleFunPostfixRet = getBundleFunPostfix(resolver, resolvedType, logger, isDebugLoggingEnabled)
 
                     when (bundleFunPostfixRet.category) {
                         BundleFunPostfixCategory.NON_NULL_PRIMITIVE -> {
@@ -769,7 +788,7 @@ class NoVMProcessor(
                         }
 
                         BundleFunPostfixCategory.NOT_APPLICABLE -> {
-                            loge("State ${ksPropertyDeclaration.simpleName.asString()} is marked to be retained across PROCESS_DEATH but is not a type supported by Bundle")
+                            loge(msgNotSupportedByBundle(activityToStateEntry.key, ksPropertyDeclaration.simpleName.asString()))
                             return@filteredForEach
                         }
                     }
@@ -816,7 +835,7 @@ class NoVMProcessor(
                 .forEach filteredForEach@{ ksPropertyDeclaration ->
                     val resolvedType = ksPropertyDeclaration.type.resolve()
                     val key = generateBundleKeyValuePair(ksPropertyDeclaration).first
-                    val bundleFunPostfixRet = getBundleFunPostfix(resolver, resolvedType)
+                    val bundleFunPostfixRet = getBundleFunPostfix(resolver, resolvedType, logger, isDebugLoggingEnabled)
 
                     when (bundleFunPostfixRet.category) {
                         BundleFunPostfixCategory.NON_NULL_PRIMITIVE -> {
@@ -848,7 +867,7 @@ class NoVMProcessor(
                         }
 
                         BundleFunPostfixCategory.NOT_APPLICABLE -> {
-                            loge("State ${ksPropertyDeclaration.simpleName.asString()} is marked to be retained across PROCESS_DEATH but is not a type supported by Bundle")
+                            msgNotSupportedByBundle(fragmentToStateEntry.key, ksPropertyDeclaration.simpleName.asString())
                             return@filteredForEach
                         }
                     }

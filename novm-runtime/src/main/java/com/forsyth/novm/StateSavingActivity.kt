@@ -13,7 +13,7 @@ import kotlin.Suppress
 
 open class StateSavingActivity : AppCompatActivity() {
     companion object {
-        const val TAG = "StateSavingActivity"
+        private const val TAG = "StateSavingActivity"
     }
 
     val stateSaver: StateSaver = provideStateSaver()
@@ -75,6 +75,8 @@ open class StateSavingActivity : AppCompatActivity() {
         }
         if (savedInstanceState != null) {
             stateSaver.restoreStateBundle(this, savedInstanceState)
+            Log.d(TAG, "size on restore: ${savedInstanceState.size()}")
+            Log.d(TAG, "keys: ${savedInstanceState.keySet().toList()}")
         }
     }
 
@@ -82,7 +84,7 @@ open class StateSavingActivity : AppCompatActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         Log.d(TAG, "onSaveInstanceState")
         stateSaver.saveStateBundle(this, outState)
-        Log.d(TAG, "${outState.size()}")
+        Log.d(TAG, "size on save: ${outState.size()}")
         super.onSaveInstanceState(outState)
     }
 

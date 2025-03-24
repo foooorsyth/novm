@@ -91,7 +91,7 @@ ksp {
 | Float                | :white_check_mark:              |
 | FloatArray           | :white_check_mark:              |
 | IntArray             | :white_check_mark:              |
-| ArrayList<Int>       | :white_check_mark:              |
+| ArrayList\<Int\>       | :white_check_mark:              |
 | Parcelable           | :white_check_mark:              |
 | Serializable         | :white_check_mark:              |
 | Short                | :white_check_mark:              |
@@ -99,6 +99,6 @@ ksp {
 | Size                 | :x:              |
 | SizeF                | :x:              |
 | SparseParcelableArray | :x:              |
-| Array<String>        | :white_check_mark:              |
-| ArrayList<String>    | :white_check_mark:              |
+| Array\<String\>        | :white_check_mark:              |
+| ArrayList\<String\>    | :white_check_mark:              |
 

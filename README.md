@@ -86,7 +86,7 @@ ksp {
 | Char                              | :white_check_mark:                       |
 | CharArray                         | :white_check_mark:                       |
 | CharSequence                      | :white_check_mark:                       |
-| Array\<(out) CharSequence\>       | :construction:                                       |
+| Array\<(out) CharSequence\>       | :construction:                           |
 | ArrayList\<CharSequence\>         | :white_check_mark:                       |
 | Float                             | :white_check_mark:                       |
 | FloatArray                        | :white_check_mark:                       |

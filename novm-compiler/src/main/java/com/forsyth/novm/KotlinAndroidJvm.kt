@@ -95,6 +95,7 @@ enum class BundleFunPostfixCategory {
     NOT_APPLICABLE,
     NON_NULL_PRIMITIVE,
     NULLABLE_KNOWN_TYPE,
+    ARRAY_WITH_COVARIANT_PARAMETER,
     SUBCLASS_SERIALIZABLE_OR_PARCELABLE
 }
 
@@ -134,6 +135,13 @@ fun getBundleFunPostfix(
             BundleFunPostfixCategory.NOT_APPLICABLE
         )
     }
+
+    // TODO
+    // check if classDecl.qualifiedName == kotlin.Array
+    // then, check if classDecl.params[0] is subclass of charseq/string/parcelable
+    // return BundleFunPostfixCategory.ARRAY_WITH_COVARIANT_PARAM
+
+    // NOTE: kotlin.Array is Serializable, so all Array<(out) T> covariant need to be checked first
     if (isSubclassOf(classDecl, "java.io.Serializable", logger, isDebugLoggingEnabled)) {
         return BundleFunPostfixRet(
             "Serializable",
@@ -195,6 +203,7 @@ fun isSubclassOf(classDecl: KSClassDeclaration,
         .mapNotNull { ksTypeReference -> ksTypeReference.resolve().declaration as? KSClassDeclaration }
     glogd(logger, isDebugLoggingEnabled, "${classDecl.qualifiedName?.asString()} isSubclassOf supertypes: ${superTypeClassDecls.toList()}")
     if (classDecl.qualifiedName?.asString() == qualifiedNameOfSuper) {
+        // TODO check covariant params
         return true
     }
     if (superTypeClassDecls.isEmpty()) {

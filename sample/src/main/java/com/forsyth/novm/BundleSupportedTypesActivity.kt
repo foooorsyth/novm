@@ -65,7 +65,8 @@ class BundleSupportedTypesActivity : StateSavingActivity() {
     lateinit var floatArray: FloatArray
 
     @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
-    var int: Int = 1
+    var int: Int = 1 // value change to 2 in first onCreate
+
     @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
     lateinit var intArray: IntArray
 
@@ -78,8 +79,12 @@ class BundleSupportedTypesActivity : StateSavingActivity() {
     @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
     lateinit var parcelableArray: Array<TestParcelable>
 
-    // TODO ParcelableArray, ParcelableArrayList
-    // TODO SparseParcelableArray
+    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    lateinit var parcelableArrayList: ArrayList<TestParcelable>
+
+    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    lateinit var sparseParcelableArray: SparseArray<TestParcelable>
+
     @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
     lateinit var serializable: Serializable
 
@@ -123,7 +128,9 @@ class BundleSupportedTypesActivity : StateSavingActivity() {
             intArray = intArrayOf(2)
             integerArrayList = arrayListOf(2)
             parcelable = TestParcelable(2)
-            //parcelableArray = arrayOf(TestParcelable(2))
+            parcelableArray = arrayOf(TestParcelable(2))
+            parcelableArrayList = arrayListOf(TestParcelable(2))
+            sparseParcelableArray = SparseArray<TestParcelable>().apply { append(0, TestParcelable(2)) }
             serializable = TestSerializable(2)
             short = 2
             shortArr = shortArrayOf(2)
@@ -148,7 +155,9 @@ class BundleSupportedTypesActivity : StateSavingActivity() {
             assert(intArray[0] == 2)
             assert(integerArrayList[0] == 2)
             assert((parcelable as TestParcelable).data == 2)
-            //assert(parcelableArray[0].data == 2)
+            assert(parcelableArray[0].data == 2)
+            assert(parcelableArrayList[0].data == 2)
+            assert(sparseParcelableArray[0].data == 2)
             assert((serializable as TestSerializable).data == 2)
             assert(short == 2.toShort())
             assert(shortArr[0] == 2.toShort())

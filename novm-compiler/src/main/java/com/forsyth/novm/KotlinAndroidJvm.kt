@@ -1,10 +1,13 @@
 package com.forsyth.novm
 
+import com.google.devtools.ksp.getClassDeclarationByName
+import com.google.devtools.ksp.innerArguments
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import com.google.devtools.ksp.symbol.KSType
+import com.squareup.kotlinpoet.ksp.toClassName
 import com.squareup.kotlinpoet.ksp.toTypeName
 
 
@@ -74,12 +77,6 @@ val BUNDLE_SUPPORTED_NULLABLE_TYPES = mapOf(
     "android.util.Size" to "Size",
     "android.util.SizeF" to "SizeF",
     "android.os.IBinder" to "Binder",
-    // TODO all below need to be checked again for <(out) T> instead of just <T>
-    // this is a good quick check, though
-    "kotlin.Array<kotlin.CharSequence>" to "CharSequenceArray",
-    "kotlin.Array<kotlin.String>" to "StringArray",
-    "kotlin.Array<android.os.Parcelable>" to "ParcelableArray",
-    "android.util.SparseArray<android.os.Parcelable>" to "SparseParcelableArray",
 )
 
 fun getBundleFunPostfixForNonPrimitive(resolver: Resolver, ksType: KSType): String? {
@@ -126,21 +123,90 @@ fun getBundleFunPostfix(
             BundleFunPostfixCategory.NULLABLE_KNOWN_TYPE
         )
     }
+    val nonNullKsType = if (ksType.isMarkedNullable) {
+        ksType.makeNotNullable()
+    } else {
+        ksType
+    }
 
+    if (ksType.innerArguments.isNotEmpty()) {
+        if (ksType.innerArguments.size > 1) {
+            glogd(logger, isDebugLoggingEnabled, "parameterized type with too many arguments (${ksType.toTypeName()}. giving up...")
+            return BundleFunPostfixRet(
+                null,
+                BundleFunPostfixCategory.NOT_APPLICABLE
+            )
+        }
+        glogd(logger, isDebugLoggingEnabled, "!!! typeName: ${nonNullKsType.toTypeName()}")
+        glogd(logger, isDebugLoggingEnabled, "!!! typeNameSPLIT: ${nonNullKsType.toTypeName().toString().split('<')[0]}")
+        val parameterizedTypeQualified = nonNullKsType.toTypeName().toString().split('<')[0] // fragile
+        val innerClassDecl = resolver.getClassDeclarationByName(ksType.innerArguments[0].toTypeName().toString())
+        if (innerClassDecl == null) {
+            // Array with no param. Do we stop here? Or let this continue until we think it's a valid
+            // Serializable? Think we should stop here
+            glogd(logger, isDebugLoggingEnabled, "found parameterized type ${ksType.toTypeName()} with unresolvable first param. giving up...")
+            return BundleFunPostfixRet(
+                null,
+                BundleFunPostfixCategory.NOT_APPLICABLE
+            )
+        }
+        when (parameterizedTypeQualified) {
+            "kotlin.Array", "kotlin.collections.ArrayList" -> {
+                if (isSubclassOf(innerClassDecl, "kotlin.String", logger, isDebugLoggingEnabled)) {
+                    return BundleFunPostfixRet(
+                        if (parameterizedTypeQualified.endsWith("List")) "StringArrayList" else "StringArray",
+                        BundleFunPostfixCategory.NULLABLE_KNOWN_TYPE
+                    )
+                } else if (isSubclassOf(innerClassDecl, "android.os.Parcelable", logger, isDebugLoggingEnabled)){
+                    return BundleFunPostfixRet(
+                        if (parameterizedTypeQualified.endsWith("List")) "ParcelableArrayList" else "ParcelableArray",
+                        BundleFunPostfixCategory.ARRAY_WITH_COVARIANT_PARAMETER
+                    )
+                } else if (isSubclassOf(innerClassDecl, "kotlin.CharSequence", logger, isDebugLoggingEnabled)) {
+                    return BundleFunPostfixRet(
+                        if (parameterizedTypeQualified.endsWith("List")) "CharSequenceArrayList" else "CharSequenceArray",
+                        BundleFunPostfixCategory.NULLABLE_KNOWN_TYPE
+                    )
+                } else {
+                    glogd(logger, isDebugLoggingEnabled, "found Array with unsupported type param (not String, Parcelable or CharSequence). giving up...")
+                    return BundleFunPostfixRet(
+                        null,
+                        BundleFunPostfixCategory.NOT_APPLICABLE
+                    )
+                }
+            }
+            "android.util.SparseArray" -> {
+                return if (isSubclassOf(innerClassDecl, "android.os.Parcelable", logger, isDebugLoggingEnabled)){
+                    BundleFunPostfixRet(
+                        "SparseParcelableArray",
+                        BundleFunPostfixCategory.ARRAY_WITH_COVARIANT_PARAMETER
+                    )
+                } else {
+                    glogd(logger, isDebugLoggingEnabled, "found SparseArray with unsupported type param (not Parcelable). giving up...")
+                    BundleFunPostfixRet(
+                        null,
+                        BundleFunPostfixCategory.NOT_APPLICABLE
+                    )
+                }
+            }
+            else -> {
+                glogd(logger, isDebugLoggingEnabled, "found parameterized type ${ksType.toTypeName()} that's not supported...")
+                BundleFunPostfixRet(
+                    null,
+                    BundleFunPostfixCategory.NOT_APPLICABLE
+                )
+            }
+        }
+    }
     val classDecl = try {
-        ksType.declaration as KSClassDeclaration
+        nonNullKsType.declaration as KSClassDeclaration
     } catch (ex: Exception) {
+        glogd(logger, isDebugLoggingEnabled, "type ${nonNullKsType.toTypeName()} for bundle type has no params and we cannot find class declaration. giving up...")
         return BundleFunPostfixRet(
             null,
             BundleFunPostfixCategory.NOT_APPLICABLE
         )
     }
-
-    // TODO
-    // check if classDecl.qualifiedName == kotlin.Array
-    // then, check if classDecl.params[0] is subclass of charseq/string/parcelable
-    // return BundleFunPostfixCategory.ARRAY_WITH_COVARIANT_PARAM
-
     // NOTE: kotlin.Array is Serializable, so all Array<(out) T> covariant need to be checked first
     if (isSubclassOf(classDecl, "java.io.Serializable", logger, isDebugLoggingEnabled)) {
         return BundleFunPostfixRet(
@@ -203,7 +269,6 @@ fun isSubclassOf(classDecl: KSClassDeclaration,
         .mapNotNull { ksTypeReference -> ksTypeReference.resolve().declaration as? KSClassDeclaration }
     glogd(logger, isDebugLoggingEnabled, "${classDecl.qualifiedName?.asString()} isSubclassOf supertypes: ${superTypeClassDecls.toList()}")
     if (classDecl.qualifiedName?.asString() == qualifiedNameOfSuper) {
-        // TODO check covariant params
         return true
     }
     if (superTypeClassDecls.isEmpty()) {

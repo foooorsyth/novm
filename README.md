@@ -77,32 +77,33 @@ ksp {
 
 ### Supported types for retention across process death
 
-| Bundle Entry Type                 | Supported by novm?                       |
-|-----------------------------------|------------------------------------------|
-| IBinder                           | :white_check_mark:                       |
-| Bundle                            | :white_check_mark:                       |
-| Byte                              | :white_check_mark:                       |
-| ByteArray                         | :white_check_mark:                       |
-| Char                              | :white_check_mark:                       |
-| CharArray                         | :white_check_mark:                       |
-| CharSequence                      | :white_check_mark:                       |
-| Array\<(out) CharSequence\>       | :construction:                           |
-| ArrayList\<CharSequence\>         | :white_check_mark:                       |
-| Float                             | :white_check_mark:                       |
-| FloatArray                        | :white_check_mark:                       |
-| Int                               | :white_check_mark:                       |
-| IntArray                          | :white_check_mark:                       |
-| ArrayList\<Int\>                  | :white_check_mark:                       |
-| Parcelable                        | :white_check_mark:                       |
-| Array\<(out) Parcelable\>         | :construction:                           |
-| SparseArray\<(out) Parcelable\>   | :construction:                           |
-| PersistableBundle (via #putAll()) | :x:                                      |
-| Serializable                      | :white_check_mark:                       |
-| Short                             | :white_check_mark:                       |
-| ShortArray                        | :white_check_mark:                       |
-| Size                              | :white_check_mark:                       |
-| SizeF                             | :white_check_mark:                       |
-| String                            | :white_check_mark:                       |
-| Array\<(out) String\>             | :construction:                           |
-| ArrayList\<String\>               | :white_check_mark:                       |
+| Bundle Entry Type                 | Supported by novm? |
+|-----------------------------------|--------------------|
+| IBinder                           | :white_check_mark: |
+| Bundle                            | :white_check_mark: |
+| Byte                              | :white_check_mark: |
+| ByteArray                         | :white_check_mark: |
+| Char                              | :white_check_mark: |
+| CharArray                         | :white_check_mark: |
+| CharSequence                      | :white_check_mark: |
+| Array\<(out) CharSequence\>       | :white_check_mark: |
+| ArrayList\<CharSequence\>         | :white_check_mark: |
+| Float                             | :white_check_mark: |
+| FloatArray                        | :white_check_mark: |
+| Int                               | :white_check_mark: |
+| IntArray                          | :white_check_mark: |
+| ArrayList\<Int\>                  | :white_check_mark: |
+| Parcelable                        | :white_check_mark: |
+| Array\<(out) Parcelable\>         | :white_check_mark: |
+| ArrayList\<(out) Parcelable\>     | :white_check_mark: |
+| SparseArray\<(out) Parcelable\>   | :white_check_mark: |
+| PersistableBundle (via #putAll()) | :x:                |
+| Serializable                      | :white_check_mark: |
+| Short                             | :white_check_mark: |
+| ShortArray                        | :white_check_mark: |
+| Size                              | :white_check_mark: |
+| SizeF                             | :white_check_mark: |
+| String                            | :white_check_mark: |
+| Array\<(out) String\>             | :white_check_mark: |
+| ArrayList\<String\>               | :white_check_mark: |
 

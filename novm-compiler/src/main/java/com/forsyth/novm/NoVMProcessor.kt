@@ -4,6 +4,7 @@ import com.google.devtools.ksp.KspExperimental
 import com.google.devtools.ksp.getAnnotationsByType
 import com.google.devtools.ksp.getClassDeclarationByName
 import com.google.devtools.ksp.getDeclaredProperties
+import com.google.devtools.ksp.innerArguments
 import com.google.devtools.ksp.isAnnotationPresent
 import com.google.devtools.ksp.isLocal
 import com.google.devtools.ksp.processing.CodeGenerator
@@ -605,7 +606,7 @@ class NoVMProcessor(
                 .forEach filteredForEach@{ ksPropertyDeclaration ->
                     val bundleFunPostfixRet = getBundleFunPostfix(resolver, ksPropertyDeclaration, logger, isDebugLoggingEnabled)
                     if (bundleFunPostfixRet.category == BundleFunPostfixCategory.NOT_APPLICABLE) {
-                        loge(msgNotSupportedByBundle(activityToStateEntry.key, ksPropertyDeclaration.simpleName.asString()))
+                        loge("1: " + msgNotSupportedByBundle(activityToStateEntry.key, ksPropertyDeclaration.simpleName.asString()))
                         return@filteredForEach
                     }
                     // TODO check bundlefunpostfix BEFORE codegen starts
@@ -645,7 +646,7 @@ class NoVMProcessor(
                 .forEach filteredForEach@{ ksPropertyDeclaration ->
                     val bundleFunPostfixRet = getBundleFunPostfix(resolver, ksPropertyDeclaration, logger, isDebugLoggingEnabled)
                     if (bundleFunPostfixRet.category == BundleFunPostfixCategory.NOT_APPLICABLE) {
-                        loge(msgNotSupportedByBundle(fragmentToStateEntry.key, ksPropertyDeclaration.simpleName.asString()))
+                        loge("2: " +msgNotSupportedByBundle(fragmentToStateEntry.key, ksPropertyDeclaration.simpleName.asString()))
                         return@filteredForEach
                     }
                     // TODO check bundlefunpostfix BEFORE codegen starts
@@ -786,9 +787,21 @@ class NoVMProcessor(
                             }
                             return@filteredForEach
                         }
-
+                        BundleFunPostfixCategory.ARRAY_WITH_COVARIANT_PARAMETER -> {
+                            // need to resolve param type
+                            val paramClassDecl = resolver.getClassDeclarationByName(resolvedType.innerArguments[0].toTypeName().toString())!!
+                            if (resolvedType.isMarkedNullable) {
+                                funBuilder.addStatement(
+                                    "component.${ksPropertyDeclaration.simpleName.asString()} = bundle.get${bundleFunPostfixRet.postfix}($key, ${
+                                        paramClassDecl.toClassName()
+                                    }::class.java)"
+                                )
+                            } else {
+                                funBuilder.addStatement("bundle.get${bundleFunPostfixRet.postfix}($key, ${paramClassDecl.toClassName()}::class.java)?.let { component.${ksPropertyDeclaration.simpleName.asString()} = it }")
+                            }
+                        }
                         BundleFunPostfixCategory.NOT_APPLICABLE -> {
-                            loge(msgNotSupportedByBundle(activityToStateEntry.key, ksPropertyDeclaration.simpleName.asString()))
+                            loge("3: " + msgNotSupportedByBundle(activityToStateEntry.key, ksPropertyDeclaration.simpleName.asString()))
                             return@filteredForEach
                         }
                     }
@@ -865,9 +878,21 @@ class NoVMProcessor(
                             }
                             return@filteredForEach
                         }
-
+                        BundleFunPostfixCategory.ARRAY_WITH_COVARIANT_PARAMETER -> {
+                            // need to resolve param type
+                            val paramClassDecl = resolver.getClassDeclarationByName(resolvedType.innerArguments[0].toTypeName().toString())!!
+                            if (resolvedType.isMarkedNullable) {
+                                funBuilder.addStatement(
+                                    "component.${ksPropertyDeclaration.simpleName.asString()} = bundle.get${bundleFunPostfixRet.postfix}($key, ${
+                                        paramClassDecl.toClassName()
+                                    }::class.java)"
+                                )
+                            } else {
+                                funBuilder.addStatement("bundle.get${bundleFunPostfixRet.postfix}($key, ${paramClassDecl.toClassName()}::class.java)?.let { component.${ksPropertyDeclaration.simpleName.asString()} = it }")
+                            }
+                        }
                         BundleFunPostfixCategory.NOT_APPLICABLE -> {
-                            msgNotSupportedByBundle(fragmentToStateEntry.key, ksPropertyDeclaration.simpleName.asString())
+                            loge("4: " + msgNotSupportedByBundle(fragmentToStateEntry.key, ksPropertyDeclaration.simpleName.asString()))
                             return@filteredForEach
                         }
                     }

@@ -1,9 +1,14 @@
 package com.forsyth.novm
 
 import android.os.Bundle
+import android.os.IBinder
+import android.os.IInterface
 import android.os.Parcel
 import android.os.Parcelable
 import android.util.Log
+import android.util.Size
+import android.util.SizeF
+import java.io.FileDescriptor
 import java.io.Serializable
 
 data class TestSerializable(val data: Int): Serializable
@@ -25,9 +30,8 @@ class TestParcelable(val data: Int) : Parcelable {
     }
 }
 class BundleSupportedTypesActivity : StateSavingActivity() {
-    // TODO IBinder
-    //@Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
-    //var binder: IBinder = ...
+    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    lateinit var binder: IBinder
 
     @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
     lateinit var bundle: Bundle
@@ -44,14 +48,24 @@ class BundleSupportedTypesActivity : StateSavingActivity() {
     @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
     lateinit var chArr: CharArray
 
-    // TODO CharSequence, CharSequenceArray, CharSequencyArrayList
+    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    lateinit var charSeq: CharSequence
 
+    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    lateinit var charSeqArr: Array<CharSequence>
+
+    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    lateinit var charSeqArrList: ArrayList<CharSequence>
+
+    // TODO CharSequenceArray, CharSequencyArrayList
     @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
     var float: Float = 1f // value change to 2f in first onCreate
 
     @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
     lateinit var floatArray: FloatArray
 
+    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    var int: Int = 1
     @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
     lateinit var intArray: IntArray
 
@@ -72,7 +86,11 @@ class BundleSupportedTypesActivity : StateSavingActivity() {
     @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
     lateinit var shortArr: ShortArray
 
-    // TODO Size, SizeF
+    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    lateinit var size: Size
+
+    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    lateinit var sizef: SizeF
     // TODO SparseParcelableArray
 
     @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
@@ -85,35 +103,49 @@ class BundleSupportedTypesActivity : StateSavingActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_bundle_supported_types)
         if (counter == 0) {
+            binder = newBinder()
             bundle = Bundle().also { it.putString("foo", "bar") }
             byte = 0xFF.toByte()
             byteArray = byteArrayOf(0xFF.toByte())
             ch = 'b'
             chArr = charArrayOf('b')
+            charSeq = "novm"
+            charSeqArr = arrayOf("novm")
+            charSeqArrList = arrayListOf("novm")
             float = 2f
             floatArray = floatArrayOf(2f)
+            int = 2
             intArray = intArrayOf(2)
             integerArrayList = arrayListOf(2)
             parcelable = TestParcelable(2)
             serializable = TestSerializable(2)
             short = 2
             shortArr = shortArrayOf(2)
+            size = Size(2, 2)
+            sizef = SizeF(2f, 2f)
             stringArray = arrayOf("foo")
             stringArrayList = arrayListOf("foo")
         } else {
+            assert(binder.interfaceDescriptor == "novm")
             assert(bundle.getString("foo") == "bar")
             assert(byte == 0xFF.toByte())
             assert(byteArray[0] == 0xFF.toByte())
             assert(ch == 'b')
             assert(chArr[0] == 'b')
+            assert(charSeq == "novm")
+            assert(charSeqArr[0] == "novm")
+            assert(charSeqArrList[0] == "novm")
             assert(float == 2f)
             assert(floatArray[0] == 2f)
+            assert(int == 2)
             assert(intArray[0] == 2)
             assert(integerArrayList[0] == 2)
             assert((parcelable as TestParcelable).data == 2)
             assert((serializable as TestSerializable).data == 2)
             assert(short == 2.toShort())
             assert(shortArr[0] == 2.toShort())
+            assert(size.width == 2 && size.height == 2)
+            assert(sizef.width == 2f && sizef.height == 2f)
             assert(stringArray[0] == "foo")
             assert(stringArrayList[0] == "foo")
             Log.d("BSTA", "All tests passed")
@@ -122,4 +154,30 @@ class BundleSupportedTypesActivity : StateSavingActivity() {
     }
     @Retain(across = [StateDestroyingEvent.CONFIGURATION_CHANGE])
     var counter = 0
+
+    fun newBinder(): IBinder {
+        return object: IBinder {
+            override fun getInterfaceDescriptor(): String {
+                return "novm"
+            }
+            override fun pingBinder(): Boolean {
+                return true
+            }
+            override fun isBinderAlive(): Boolean {
+                return true
+            }
+            override fun queryLocalInterface(descriptor: String): IInterface? {
+                return null
+            }
+            override fun dump(fd: FileDescriptor, args: Array<out String>?) { }
+            override fun dumpAsync(fd: FileDescriptor, args: Array<out String>?) { }
+            override fun transact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                return true
+            }
+            override fun linkToDeath(recipient: IBinder.DeathRecipient, flags: Int) { }
+            override fun unlinkToDeath(recipient: IBinder.DeathRecipient, flags: Int): Boolean {
+                return true
+            }
+        }
+    }
 }

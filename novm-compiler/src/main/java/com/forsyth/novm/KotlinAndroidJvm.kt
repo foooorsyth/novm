@@ -60,6 +60,9 @@ val BUNDLE_SUPPORTED_NULLABLE_TYPES = mapOf(
     "kotlin.String" to "String",
     "kotlin.ByteArray" to "ByteArray",
     "kotlin.CharArray" to "CharArray",
+    "kotlin.CharSequence" to "CharSequence",
+    "kotlin.Array<kotlin.CharSequence>" to "CharSequenceArray",
+    "kotlin.collections.ArrayList<kotlin.CharSequence>" to "CharSequenceArrayList",
     "kotlin.ShortArray" to "ShortArray",
     "kotlin.IntArray" to "IntArray",
     "kotlin.LongArray" to "LongArray",
@@ -69,8 +72,10 @@ val BUNDLE_SUPPORTED_NULLABLE_TYPES = mapOf(
     "kotlin.Array<kotlin.String>" to "StringArray",
     "kotlin.collections.ArrayList<kotlin.Int>" to "IntegerArrayList",
     "kotlin.collections.ArrayList<kotlin.String>" to "StringArrayList",
-    "android.os.Bundle" to "Bundle"
-    // TODO CharSequence
+    "android.os.Bundle" to "Bundle",
+    "android.util.Size" to "Size",
+    "android.util.SizeF" to "SizeF",
+    "android.os.IBinder" to "Binder"
 )
 
 fun getBundleFunPostfixForNonPrimitive(resolver: Resolver, ksType: KSType): String? {

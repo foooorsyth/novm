@@ -8,6 +8,7 @@ import android.os.Parcelable
 import android.util.Log
 import android.util.Size
 import android.util.SizeF
+import android.util.SparseArray
 import java.io.FileDescriptor
 import java.io.Serializable
 
@@ -57,7 +58,6 @@ class BundleSupportedTypesActivity : StateSavingActivity() {
     @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
     lateinit var charSeqArrList: ArrayList<CharSequence>
 
-    // TODO CharSequenceArray, CharSequencyArrayList
     @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
     var float: Float = 1f // value change to 2f in first onCreate
 
@@ -76,7 +76,7 @@ class BundleSupportedTypesActivity : StateSavingActivity() {
     lateinit var parcelable: Parcelable
 
     // TODO ParcelableArray, ParcelableArrayList
-
+    // TODO SparseParcelableArray
     @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
     lateinit var serializable: Serializable
 
@@ -91,7 +91,9 @@ class BundleSupportedTypesActivity : StateSavingActivity() {
 
     @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
     lateinit var sizef: SizeF
-    // TODO SparseParcelableArray
+
+    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    lateinit var str: String
 
     @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
     lateinit var stringArray: Array<String>
@@ -109,9 +111,9 @@ class BundleSupportedTypesActivity : StateSavingActivity() {
             byteArray = byteArrayOf(0xFF.toByte())
             ch = 'b'
             chArr = charArrayOf('b')
-            charSeq = "novm"
-            charSeqArr = arrayOf("novm")
-            charSeqArrList = arrayListOf("novm")
+            charSeq = "foo"
+            charSeqArr = arrayOf("foo")
+            charSeqArrList = arrayListOf("foo")
             float = 2f
             floatArray = floatArrayOf(2f)
             int = 2
@@ -123,18 +125,19 @@ class BundleSupportedTypesActivity : StateSavingActivity() {
             shortArr = shortArrayOf(2)
             size = Size(2, 2)
             sizef = SizeF(2f, 2f)
+            str = "foo"
             stringArray = arrayOf("foo")
             stringArrayList = arrayListOf("foo")
         } else {
-            assert(binder.interfaceDescriptor == "novm")
+            assert(binder.interfaceDescriptor == "foo")
             assert(bundle.getString("foo") == "bar")
             assert(byte == 0xFF.toByte())
             assert(byteArray[0] == 0xFF.toByte())
             assert(ch == 'b')
             assert(chArr[0] == 'b')
-            assert(charSeq == "novm")
-            assert(charSeqArr[0] == "novm")
-            assert(charSeqArrList[0] == "novm")
+            assert(charSeq == "foo")
+            assert(charSeqArr[0] == "foo")
+            assert(charSeqArrList[0] == "foo")
             assert(float == 2f)
             assert(floatArray[0] == 2f)
             assert(int == 2)
@@ -146,6 +149,7 @@ class BundleSupportedTypesActivity : StateSavingActivity() {
             assert(shortArr[0] == 2.toShort())
             assert(size.width == 2 && size.height == 2)
             assert(sizef.width == 2f && sizef.height == 2f)
+            assert(str == "foo")
             assert(stringArray[0] == "foo")
             assert(stringArrayList[0] == "foo")
             Log.d("BSTA", "All tests passed")
@@ -158,7 +162,7 @@ class BundleSupportedTypesActivity : StateSavingActivity() {
     fun newBinder(): IBinder {
         return object: IBinder {
             override fun getInterfaceDescriptor(): String {
-                return "novm"
+                return "foo"
             }
             override fun pingBinder(): Boolean {
                 return true

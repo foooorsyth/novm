@@ -61,7 +61,6 @@ val BUNDLE_SUPPORTED_NULLABLE_TYPES = mapOf(
     "kotlin.ByteArray" to "ByteArray",
     "kotlin.CharArray" to "CharArray",
     "kotlin.CharSequence" to "CharSequence",
-    "kotlin.Array<kotlin.CharSequence>" to "CharSequenceArray",
     "kotlin.collections.ArrayList<kotlin.CharSequence>" to "CharSequenceArrayList",
     "kotlin.ShortArray" to "ShortArray",
     "kotlin.IntArray" to "IntArray",
@@ -69,13 +68,18 @@ val BUNDLE_SUPPORTED_NULLABLE_TYPES = mapOf(
     "kotlin.FloatArray" to "FloatArray",
     "kotlin.DoubleArray" to "DoubleArray",
     "kotlin.BooleanArray" to "BooleanArray",
-    "kotlin.Array<kotlin.String>" to "StringArray",
     "kotlin.collections.ArrayList<kotlin.Int>" to "IntegerArrayList",
     "kotlin.collections.ArrayList<kotlin.String>" to "StringArrayList",
     "android.os.Bundle" to "Bundle",
     "android.util.Size" to "Size",
     "android.util.SizeF" to "SizeF",
-    "android.os.IBinder" to "Binder"
+    "android.os.IBinder" to "Binder",
+    // TODO all below need to be checked again for <(out) T> instead of just <T>
+    // this is a good quick check, though
+    "kotlin.Array<kotlin.CharSequence>" to "CharSequenceArray",
+    "kotlin.Array<kotlin.String>" to "StringArray",
+    "kotlin.Array<android.os.Parcelable>" to "ParcelableArray",
+    "android.util.SparseArray<android.os.Parcelable>" to "SparseParcelableArray",
 )
 
 fun getBundleFunPostfixForNonPrimitive(resolver: Resolver, ksType: KSType): String? {

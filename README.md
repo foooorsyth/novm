@@ -79,26 +79,26 @@ ksp {
 
 | Bundle Type           | Supported by novm? |
 |-----------------------|--------------------|
-| IBinder               | [ ]                |
-| Bundle                | [x]                |
-| Byte                  | [x]                |
-| ByteArray             | [x]                |
-| Char                  | [x]                |
-| CharArray             | [x]                |
-| CharSequence          | [ ]                |
-| CharSequenceArray     | [ ]                |
-| CharSequenceArrayList | [ ]                |
-| Float                 | [x]                |
-| FloatArray            | [x]                |
-| IntArray              | [x]                |
-| ArrayList<Int>        | [x]                |
-| Parcelable            | [x]                |
-| Serializable          | [x]                |
-| Short                 | [x]                |
-| ShortArray            | [x]                |
-| Size                  | [ ]                |
-| SizeF                 | [ ]                |
-| SparseParcelableArray | [ ]                |
-| Array<String>         | [x]                |
-| ArrayList<String>     | [x]                |
+| IBinder               | - [ ]              |
+| Bundle                | - [x]              |
+| Byte                  | - [x]              |
+| ByteArray             | - [x]              |
+| Char                  | - [x]              |
+| CharArray             | - [x]              |
+| CharSequence          | - [ ]              |
+| CharSequenceArray     | - [ ]              |
+| CharSequenceArrayList | - [ ]              |
+| Float                 | - [x]              |
+| FloatArray            | - [x]              |
+| IntArray              | - [x]              |
+| ArrayList<Int>        | - [x]              |
+| Parcelable            | - [x]              |
+| Serializable          | - [x]              |
+| Short                 | - [x]              |
+| ShortArray            | - [x]              |
+| Size                  | - [ ]              |
+| SizeF                 | - [ ]              |
+| SparseParcelableArray | - [ ]              |
+| Array<String>         | - [x]              |
+| ArrayList<String>     | - [x]              |
 

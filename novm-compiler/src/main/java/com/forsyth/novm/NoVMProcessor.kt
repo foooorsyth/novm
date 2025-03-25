@@ -312,6 +312,7 @@ class NoVMProcessor(
             packageName,
             resolver,
             componentToStateMap,
+            stateHoldersForComponents
         )
         val builder =
             TypeSpec.classBuilder("GeneratedStateSaver") //dangerous, collisions // TODO const string
@@ -342,6 +343,7 @@ class NoVMProcessor(
                         packageName,
                         resolver,
                         componentToStateMap,
+                        stateHoldersForComponents
                     )
                 )
         val companionObjectBuilder = TypeSpec.companionObjectBuilder()
@@ -387,7 +389,8 @@ class NoVMProcessor(
     private fun generateSaveStateBundle(
         packageName: String,
         resolver: Resolver,
-        componentToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>>
+        componentToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>>,
+        stateHoldersForComponents: MutableMap<String, TypeSpec>
     ): SSBRet {
         val bundleKeyValuePairs = mutableMapOf<String, String>()
         val funBuilder = generateSaveStateBundleSignature()
@@ -422,7 +425,7 @@ class NoVMProcessor(
                         return@filteredForEach
                     }
                     // TODO check bundlefunpostfix BEFORE codegen starts
-                    val kvp = generateBundleKeyValuePair(ksPropertyDeclaration)
+                    val kvp = generateBundleKeyValuePair(stateHoldersForComponents[activityToStateEntry.key]!!.name!!, ksPropertyDeclaration)
                     bundleKeyValuePairs[kvp.first] = kvp.second
                     if (ksPropertyDeclaration.modifiers.contains(Modifier.LATEINIT)) {
                         funBuilder.beginControlFlow("run {")
@@ -462,7 +465,7 @@ class NoVMProcessor(
                         return@filteredForEach
                     }
                     // TODO check bundlefunpostfix BEFORE codegen starts
-                    val kvp = generateBundleKeyValuePair(ksPropertyDeclaration)
+                    val kvp = generateBundleKeyValuePair(stateHoldersForComponents[fragmentToStateEntry.key]!!.name!!, ksPropertyDeclaration)
                     bundleKeyValuePairs[kvp.first] = kvp.second
                     if (ksPropertyDeclaration.modifiers.contains(Modifier.LATEINIT)) {
                         funBuilder.beginControlFlow("run {")
@@ -486,14 +489,14 @@ class NoVMProcessor(
             val clsSimpleName =
                 resolver.getClassDeclarationByName(fragmentToStateEntry.key)!!.simpleName.asString()
             // CLASS
-            val lKvp = generateBundleFragmentKeyValuePairForClass(clsSimpleName)
+            val lKvp = generateBundleFragmentKeyValuePairForClass(stateHoldersForComponents[fragmentToStateEntry.key]!!.name!!)
             bundleKeyValuePairs[lKvp.first] = lKvp.second
             funBuilder.beginControlFlow("when (component.identificationStrategy) {")
             funBuilder.beginControlFlow("FragmentIdentificationStrategy.ID -> {")
             funBuilder.addStatement(
                 "bundle.putBundle(${
                     generateBundleFragmentKeyStringForId(
-                        clsSimpleName
+                        stateHoldersForComponents[fragmentToStateEntry.key]!!.name!!
                     )
                 }, fragBundle)"
             )
@@ -505,7 +508,7 @@ class NoVMProcessor(
             funBuilder.addStatement(
                 "bundle.putBundle(${
                     generateBundleFragmentKeyStringForTag(
-                        clsSimpleName
+                        stateHoldersForComponents[fragmentToStateEntry.key]!!.name!!
                     )
                 }, fragBundle)"
             )
@@ -547,7 +550,8 @@ class NoVMProcessor(
     private fun generateRestoreStateBundle(
         packageName: String,
         resolver: Resolver,
-        componentToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>>
+        componentToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>>,
+        stateHoldersForComponents: MutableMap<String, TypeSpec>,
     ): FunSpec {
         val funBuilder = generateRestoreStateBundleSignature()
             .addModifiers(KModifier.OVERRIDE)
@@ -568,7 +572,7 @@ class NoVMProcessor(
                 }
                 .forEach filteredForEach@{ ksPropertyDeclaration ->
                     val resolvedType = ksPropertyDeclaration.type.resolve()
-                    val key = generateBundleKeyValuePair(ksPropertyDeclaration).first
+                    val key = generateBundleKeyValuePair(stateHoldersForComponents[activityToStateEntry.key]!!.name!!, ksPropertyDeclaration).first
                     val bundleFunPostfixRet = getBundleFunPostfix(resolver, resolvedType, logger, isDebugLoggingEnabled)
 
                     when (bundleFunPostfixRet.category) {
@@ -634,18 +638,16 @@ class NoVMProcessor(
             )
         }
         fragmentsToStates.forEach { fragmentToStateEntry ->
-            val clsSimpleName =
-                resolver.getClassDeclarationByName(fragmentToStateEntry.key)!!.simpleName.asString()
             funBuilder.beginControlFlow("is ${fragmentToStateEntry.key} -> {")
             funBuilder.beginControlFlow("val fragBundleKey = when (component.identificationStrategy) {")
             funBuilder.beginControlFlow("FragmentIdentificationStrategy.TAG -> {")
-            funBuilder.addStatement(generateBundleFragmentKeyStringForTag(clsSimpleName))
+            funBuilder.addStatement(generateBundleFragmentKeyStringForTag(stateHoldersForComponents[fragmentToStateEntry.key]!!.name!!))
             funBuilder.endControlFlow()
             funBuilder.beginControlFlow("FragmentIdentificationStrategy.ID -> {")
-            funBuilder.addStatement(generateBundleFragmentKeyStringForId(clsSimpleName))
+            funBuilder.addStatement(generateBundleFragmentKeyStringForId(stateHoldersForComponents[fragmentToStateEntry.key]!!.name!!))
             funBuilder.endControlFlow()
             funBuilder.beginControlFlow("FragmentIdentificationStrategy.CLASS -> {")
-            funBuilder.addStatement(generateBundleFragmentKeyValuePairForClass(clsSimpleName).first)
+            funBuilder.addStatement(generateBundleFragmentKeyValuePairForClass(stateHoldersForComponents[fragmentToStateEntry.key]!!.name!!).first)
             funBuilder.endControlFlow()
             funBuilder.endControlFlow() // close when (id strat for bundle key)
             funBuilder.addStatement("val fragBundle = bundle.getBundle(fragBundleKey)")
@@ -659,7 +661,7 @@ class NoVMProcessor(
                 }
                 .forEach filteredForEach@{ ksPropertyDeclaration ->
                     val resolvedType = ksPropertyDeclaration.type.resolve()
-                    val key = generateBundleKeyValuePair(ksPropertyDeclaration).first
+                    val key = generateBundleKeyValuePair(stateHoldersForComponents[fragmentToStateEntry.key]!!.name!!, ksPropertyDeclaration).first
                     val bundleFunPostfixRet = getBundleFunPostfix(resolver, resolvedType, logger, isDebugLoggingEnabled)
 
                     when (bundleFunPostfixRet.category) {
@@ -726,21 +728,21 @@ class NoVMProcessor(
 
     Two of these are determined at runtime -- only the class variant is predetermined
      */
-    private fun generateBundleFragmentKeyValuePairForClass(clsSimpleName: String): Pair<String, String> {
-        return "kl_$clsSimpleName" to "l_$clsSimpleName"
+    private fun generateBundleFragmentKeyValuePairForClass(componentStateHolderName: String): Pair<String, String> {
+        return "kl_${componentStateHolderName.substring(0, componentStateHolderName.length - 5)}" to "l_${componentStateHolderName.substring(0, componentStateHolderName.length - 5)}"
     }
 
-    private fun generateBundleFragmentKeyStringForId(clsSimpleName: String): String {
-        return "\"i_${clsSimpleName}_\${component.id}\""
+    private fun generateBundleFragmentKeyStringForId(componentStateHolderName: String): String {
+        return "\"i_${componentStateHolderName.substring(0, componentStateHolderName.length - 5)}_\${component.id}\""
     }
 
-    private fun generateBundleFragmentKeyStringForTag(clsSimpleName: String): String {
-        return "\"t_${clsSimpleName}_\${component.tag}\""
+    private fun generateBundleFragmentKeyStringForTag(componentStateHolderName: String): String {
+        return "\"t_${componentStateHolderName.substring(0, componentStateHolderName.length - 5)}_\${component.tag}\""
     }
 
-    private fun generateBundleKeyValuePair(ksPropertyDeclaration: KSPropertyDeclaration): Pair<String, String> {
+    private fun generateBundleKeyValuePair(componentStateHolderName: String, ksPropertyDeclaration: KSPropertyDeclaration): Pair<String, String> {
         val value =
-            "${ksPropertyDeclaration.parentDeclaration!!.simpleName.asString()}_${ksPropertyDeclaration.simpleName.asString()}"
+            "${componentStateHolderName.substring(0, componentStateHolderName.length - 5)}_${ksPropertyDeclaration.simpleName.asString()}"
         val key = "k_${value}"
         return key to value
     }
@@ -771,8 +773,6 @@ class NoVMProcessor(
         topLevelStateHolder: TypeSpec,
         stateHoldersForComponents: MutableMap<String, TypeSpec>
     ): FunSpec {
-        // TODO use topLevelStateHolder typeSpec and stateHoldersForComponents
-        // TODO instead of manually recreating names below
         val funBuilder = generateRestoreStateConfigChangeSignature(packageName)
             .addModifiers(KModifier.OVERRIDE)
             .beginControlFlow("if (stateHolder is EmptyStateHolder) {")
@@ -922,8 +922,6 @@ class NoVMProcessor(
         topLevelStateHolder: TypeSpec,
         stateHoldersForComponents: MutableMap<String, TypeSpec>,
     ): FunSpec {
-        // TODO use topLevelStateHolder typeSpec and stateHoldersForComponents
-        // TODO instead of manually recreating names below
         val funBuilder = generateSaveStateConfigChangeSignature(packageName)
             .addModifiers(KModifier.OVERRIDE)
             .addStatement("val stateHolder = ${topLevelStateHolder.name!!}()")

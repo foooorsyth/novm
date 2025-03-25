@@ -5,6 +5,6 @@ import com.forsyth.novm.Retain
 import com.forsyth.novm.StateDestroyingEvent
 
 class IntentionalNameCollisionActivity : AppCompatActivity() {
-    @Retain(across = [StateDestroyingEvent.CONFIGURATION_CHANGE])
+    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
     var thisCollides: Boolean = true
 }

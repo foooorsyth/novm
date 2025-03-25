@@ -107,3 +107,15 @@ ksp {
 | Array\<(out) String\>             | :white_check_mark: |
 | ArrayList\<String\>               | :white_check_mark: |
 
+### Working with R8 / ProGuard
+
+novm should work out of the box with code minification and shrinking enabled. novm does not use 
+runtime reflection to save and restore state, but does need to identify certain classes by name 
+at build time. The following rules are set in :novm-runtime/consumer-rules.pro:
+
+```
+-keep class com.forsyth.novm.** { *; }
+-keep class com.forsyth.novm.dependencies.** { *; }
+-keep class androidx.activity.ComponentActivity { *; }
+-keep class androidx.fragment.app.Fragment { *; }
+```

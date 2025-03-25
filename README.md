@@ -111,7 +111,7 @@ ksp {
 
 novm should work out of the box with code minification and shrinking enabled. novm does not use 
 runtime reflection to save and restore state, but does need to identify certain classes by name 
-at build time. The following rules are set in :novm-runtime/consumer-rules.pro:
+at build time. The following rules are set in ```:novm-runtime/consumer-rules.pro```:
 
 ```
 -keep class com.forsyth.novm.** { *; }

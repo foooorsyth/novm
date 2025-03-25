@@ -7,7 +7,6 @@ import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import com.google.devtools.ksp.symbol.KSType
-import com.squareup.kotlinpoet.ksp.toClassName
 import com.squareup.kotlinpoet.ksp.toTypeName
 
 
@@ -137,8 +136,6 @@ fun getBundleFunPostfix(
                 BundleFunPostfixCategory.NOT_APPLICABLE
             )
         }
-        glogd(logger, isDebugLoggingEnabled, "!!! typeName: ${nonNullKsType.toTypeName()}")
-        glogd(logger, isDebugLoggingEnabled, "!!! typeNameSPLIT: ${nonNullKsType.toTypeName().toString().split('<')[0]}")
         val parameterizedTypeQualified = nonNullKsType.toTypeName().toString().split('<')[0] // fragile
         val innerClassDecl = resolver.getClassDeclarationByName(ksType.innerArguments[0].toTypeName().toString())
         if (innerClassDecl == null) {

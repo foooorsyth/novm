@@ -32,6 +32,12 @@
         <activity
             android:name=".sample2.AnotherLibraryActivity"
             android:exported="true" />
+        <activity
+            android:name=".sample.IntentionalNameCollisionActivity"
+            android:exported="true" />
+        <activity
+            android:name=".sample2.IntentionalNameCollisionActivity"
+            android:exported="true" />
     </application>
 
 </manifest>

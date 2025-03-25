@@ -12,24 +12,7 @@ import android.util.SparseArray
 import java.io.FileDescriptor
 import java.io.Serializable
 
-data class TestSerializable(val data: Int): Serializable
-class TestParcelable(val data: Int) : Parcelable {
-    constructor(`in`: Parcel) : this(`in`.readInt())
-    override fun describeContents(): Int {
-        return 0
-    }
-    override fun writeToParcel(out: Parcel, flags: Int) {
-        out.writeInt(data)
-    }
-    companion object CREATOR: Parcelable.Creator<TestParcelable?> {
-        override fun createFromParcel(`in`: Parcel): TestParcelable? {
-            return TestParcelable(`in`)
-        }
-        override fun newArray(size: Int): Array<TestParcelable?> {
-            return arrayOfNulls(size)
-        }
-    }
-}
+
 class BundleSupportedTypesActivity : StateSavingActivity() {
     @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
     lateinit var binder: IBinder
@@ -74,7 +57,7 @@ class BundleSupportedTypesActivity : StateSavingActivity() {
     lateinit var integerArrayList: ArrayList<Int>
 
     @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
-    lateinit var parcelable: Parcelable
+    lateinit var parcelable: TestParcelable
 
     @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
     lateinit var parcelableArray: Array<TestParcelable>
@@ -196,6 +179,26 @@ class BundleSupportedTypesActivity : StateSavingActivity() {
             override fun unlinkToDeath(recipient: IBinder.DeathRecipient, flags: Int): Boolean {
                 return true
             }
+        }
+    }
+}
+
+data class TestSerializable(val data: Int): Serializable
+
+class TestParcelable(val data: Int) : Parcelable {
+    constructor(`in`: Parcel) : this(`in`.readInt())
+    override fun describeContents(): Int {
+        return 0
+    }
+    override fun writeToParcel(out: Parcel, flags: Int) {
+        out.writeInt(data)
+    }
+    companion object CREATOR: Parcelable.Creator<TestParcelable?> {
+        override fun createFromParcel(`in`: Parcel): TestParcelable? {
+            return TestParcelable(`in`)
+        }
+        override fun newArray(size: Int): Array<TestParcelable?> {
+            return arrayOfNulls(size)
         }
     }
 }

@@ -17,7 +17,6 @@ import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSNode
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import com.google.devtools.ksp.symbol.Modifier
-import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
@@ -127,18 +126,6 @@ class NoVMProcessor(
         }
         logd("dcls in libs: ${pkgDecls.toList().size}")
         logd("retain symbols from libs: ${retainSymbols.size}")
-        // TODO get package, statesavingactivity name from ksp options
-//        val isStateSavingActivityWritten = resolver.getClassDeclarationByName("${DEFAULT_PACKAGE_NAME}.$DEFAULT_STATE_SAVING_ACTIVITY_SIMPLE_NAME") != null
-//        val isStateSavingFragmentWritten = resolver.getClassDeclarationByName("${DEFAULT_PACKAGE_NAME}.$DEFAULT_STATE_SAVING_FRAGMENT_SIMPLE_NAME") != null
-//        if (!isStateSavingActivityWritten) {
-//            logd("generating ssactivity, pass $pass")
-//            generateStateSavingActivityFile(DEFAULT_PACKAGE_NAME).writeTo(codeGenerator, Dependencies(true))
-//        }
-//        if (!isStateSavingFragmentWritten) {
-//            logd("generating ssfragment, pass $pass")
-//            generateStateSavingFragmentFile(DEFAULT_PACKAGE_NAME).writeTo(codeGenerator, Dependencies(true))
-//        }
-        // TODO instead of checking if static files are generated, just check the classpath for them
         retainSymbols.addAll(resolver.getSymbolsWithAnnotation(Retain::class.qualifiedName!!, false))
         val recheck = mutableListOf<KSAnnotated>()
         val componentToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>> =
@@ -214,7 +201,7 @@ class NoVMProcessor(
         return emptyList()
     }
 
-    fun generateRandomAlphanumeric(length: Int = 6): String {
+    private fun generateRandomAlphanumeric(length: Int = 6): String {
         val charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
         return (1..length)
             .map { charset[Random.nextInt(charset.length)] }
@@ -271,11 +258,6 @@ class NoVMProcessor(
         }
     }
 
-    private fun generateStaticCode(packageName: String) {
-        generateStateSavingActivityFile(packageName).writeTo(codeGenerator, Dependencies(true))
-        generateStateSavingFragmentFile(packageName).writeTo(codeGenerator, Dependencies(true))
-    }
-
     private fun generateDynamicCode(
         resolver: Resolver,
         componentToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>>
@@ -308,185 +290,8 @@ class NoVMProcessor(
             .addTypes(stateHoldersForComponents.values)
             .addType(topLevelStateHolder)
             .addType(generatedStateSaver)
-            // StateSaver interface
-            /*
-            .addType(
-                TypeSpec.interfaceBuilder("StateSaver")
-                    .addFunction(
-                        generateSaveStateConfigChangeSignature(packageName)
-                            .addModifiers(KModifier.ABSTRACT)
-                            .build()
-                    )
-                    .addFunction(
-                        generateRestoreStateConfigChangeSignature(packageName)
-                            .addModifiers(KModifier.ABSTRACT)
-                            .build()
-                    )
-                    .addFunction(
-                        generateSaveStateBundleSignature()
-                            .addModifiers(KModifier.ABSTRACT)
-                            .build()
-                    )
-                    .addFunction(
-                        generateRestoreStateBundleSignature()
-                            .addModifiers(KModifier.ABSTRACT)
-                            .build()
-                    )
-                    .build()
-            )
-            .addFunction(
-                FunSpec.builder("provideStateSaver")
-                    .returns(ClassName(packageName, "StateSaver"))
-                    .addStatement("%L", "return GeneratedStateSaver()")
-                    .build()
-            )
-             */
             .build()
             .writeTo(codeGenerator, Dependencies(true, *componentContainingFiles.toTypedArray()))
-    }
-
-    private fun generateStateSavingFragmentFile(packageName: String): FileSpec {
-        return FileSpec.builder(packageName, "StateSavingFragment")
-            .addType(
-                TypeSpec.classBuilder("StateSavingFragment")
-                    .addModifiers(KModifier.OPEN)
-                    .superclass(ClassName("androidx.fragment.app", "Fragment"))
-                    .addProperty(
-                        PropertySpec.builder("stateSaver", ClassName(packageName, "StateSaver"))
-                            .initializer("%L", "provideStateSaver()")
-                            .build()
-                    )
-                    .addProperty(
-                        PropertySpec.builder(
-                            "identificationStrategy",
-                            ClassName(packageName, "FragmentIdentificationStrategy")
-                        )
-                            .initializer("%L", "FragmentIdentificationStrategy.TAG")
-                            .addModifiers(KModifier.OPEN)
-                            .mutable(true)
-                            .build()
-                    )
-                    .addFunction(
-                        FunSpec.builder("onCreate")
-                            .addModifiers(KModifier.OVERRIDE)
-                            .addAnnotation(ClassName("androidx.annotation", "CallSuper"))
-                            .addParameter(
-                                ParameterSpec
-                                    .builder(
-                                        "savedInstanceState",
-                                        ClassName("android.os", "Bundle").copy(nullable = true)
-                                    )
-                                    .build()
-                            )
-                            .addStatement("%L", "super.onCreate(savedInstanceState)")
-                            .beginControlFlow("if (savedInstanceState != null)")
-                            .addStatement(
-                                "%L",
-                                "stateSaver.restoreStateBundle(this, savedInstanceState)"
-                            )
-                            .endControlFlow() // close if
-                            .build()
-                    )
-                    .addFunction(
-                        FunSpec.builder("onSaveInstanceState")
-                            .addModifiers(KModifier.OVERRIDE)
-                            .addAnnotation(ClassName("androidx.annotation", "CallSuper"))
-                            .addParameter(
-                                ParameterSpec
-                                    .builder("outState", ClassName("android.os", "Bundle"))
-                                    .build()
-                            )
-                            .addStatement("%L", "stateSaver.saveStateBundle(this, outState)")
-                            .addStatement("%L", "super.onSaveInstanceState(outState)")
-                            .build()
-                    )
-                    .build()
-            )
-            .build()
-
-    }
-
-    private fun generateStateSavingActivityFile(packageName: String): FileSpec {
-        return FileSpec.builder(packageName, DEFAULT_STATE_SAVING_ACTIVITY_SIMPLE_NAME)
-            .addType(
-                TypeSpec.classBuilder(DEFAULT_STATE_SAVING_ACTIVITY_SIMPLE_NAME)
-                    .addModifiers(KModifier.OPEN)
-                    .superclass(ClassName("androidx.appcompat.app", "AppCompatActivity"))
-                    .addProperty(
-                        PropertySpec.builder("stateSaver", ClassName(packageName, "StateSaver"))
-                            .initializer("%L", "provideStateSaver()")
-                            .build()
-                    )
-                    .addFunction(
-                        FunSpec.builder("onCreate")
-                            .addModifiers(KModifier.OVERRIDE)
-                            .addAnnotation(ClassName("androidx.annotation", "CallSuper"))
-                            .addParameter(
-                                ParameterSpec
-                                    .builder(
-                                        "savedInstanceState",
-                                        ClassName("android.os", "Bundle").copy(nullable = true)
-                                    )
-                                    .build()
-                            )
-                            .addStatement("%L", "super.onCreate(savedInstanceState)")
-                            .addStatement("%L", "@Suppress(\"DEPRECATION\")")
-                            .addCode(
-                                "(lastCustomNonConfigurationInstance as? StateHolder)?.let { retainedState ->\n" +
-                                        "  stateSaver.restoreStateConfigChange(this, retainedState)\n" +
-                                        "}\n"
-                            )
-                            .build()
-                    )
-                    .addFunction(
-                        FunSpec.builder("onRestoreInstanceState")
-                            .addModifiers(KModifier.OVERRIDE)
-                            .addAnnotation(ClassName("androidx.annotation", "CallSuper"))
-                            .addParameter(
-                                ParameterSpec
-                                    .builder(
-                                        "savedInstanceState",
-                                        ClassName("android.os", "Bundle")
-                                    )
-                                    .build()
-                            )
-                            .addStatement("%L", "super.onRestoreInstanceState(savedInstanceState)")
-                            .addStatement(
-                                "%L",
-                                "stateSaver.restoreStateBundle(this, savedInstanceState)"
-                            )
-                            .build()
-                    )
-                    .addFunction(
-                        FunSpec.builder("onSaveInstanceState")
-                            .addModifiers(KModifier.OVERRIDE)
-                            .addAnnotation(ClassName("androidx.annotation", "CallSuper"))
-                            .addParameter(
-                                ParameterSpec
-                                    .builder("outState", ClassName("android.os", "Bundle"))
-                                    .build()
-                            )
-                            .addStatement("%L", "stateSaver.saveStateBundle(this, outState)")
-                            .addStatement("%L", "super.onSaveInstanceState(outState)")
-                            .build()
-                    )
-                    .addFunction(
-                        FunSpec.builder("onRetainCustomNonConfigurationInstance")
-                            .addModifiers(KModifier.OVERRIDE)
-                            .addAnnotation(ClassName("androidx.annotation", "CallSuper"))
-                            .addAnnotation(
-                                AnnotationSpec
-                                    .builder(ClassName("kotlin", "Suppress"))
-                                    .addMember("%L", "\"OVERRIDE_DEPRECATION\"")
-                                    .build()
-                            )
-                            .addStatement("%L", "return stateSaver.saveStateConfigChange(this)")
-                            .returns(ClassName("kotlin", "Any").copy(nullable = true))
-                            .build()
-                    )
-                    .build()
-            )
-            .build()
     }
 
     private fun generateStateSaver(
@@ -966,7 +771,7 @@ class NoVMProcessor(
             .beginControlFlow("if (stateHolder is EmptyStateHolder) {")
             .addStatement("return")
             .endControlFlow()
-            .addStatement("stateHolder as GeneratedStateHolder")
+            .addStatement("stateHolder as ${topLevelStateHolder.name!!}")
             .beginControlFlow("when (component) {")
         val activitiesToStates = componentToStateMap.filter { entry ->
             val classDecl = resolver.getClassDeclarationByName(entry.key)!!
@@ -982,10 +787,11 @@ class NoVMProcessor(
         funBuilder.beginControlFlow("is $COMPONENT_ACTIVITY_QUALIFIED_NAME -> {")
         funBuilder.beginControlFlow("when (component) {")
         activitiesToStates.forEach { activityToStateEntry ->
-            val classDeclOfActivity = resolver.getClassDeclarationByName(activityToStateEntry.key)!!
             funBuilder.beginControlFlow("is ${activityToStateEntry.key} -> {")
+            val typeSpecOfStateHolder =
+                stateHoldersForComponents[activityToStateEntry.key]!!
             val activityStateHolderFieldName =
-                "${lowercaseFirstLetter(classDeclOfActivity.simpleName.asString())}State"
+                lowercaseFirstLetter(typeSpecOfStateHolder.name!!)
             funBuilder.beginControlFlow("if (stateHolder.$activityStateHolderFieldName != null) {")
             activityToStateEntry.value.filter { ksPropertyDeclaration ->
                 ksPropertyDeclaration.getAnnotationsByType(Retain::class).toList()
@@ -994,8 +800,6 @@ class NoVMProcessor(
                 .forEach { ksPropertyDeclaration ->
                     // need to find equivalent field in state holder for this activity
                     // need to check for null in stateholder prop
-                    val typeSpecOfStateHolder =
-                        stateHoldersForComponents[activityToStateEntry.key]!!
                     val equivPropInStateHolder =
                         typeSpecOfStateHolder.propertySpecs.first { it.name == ksPropertyDeclaration.simpleName.asString() }
                     if (equivPropInStateHolder.type.isNullable && !ksPropertyDeclaration.type.resolve().isMarkedNullable) {
@@ -1022,15 +826,16 @@ class NoVMProcessor(
             funBuilder.beginControlFlow("is ${fragmentToStateEntry.key} -> {")
             funBuilder.beginControlFlow("val fragStateHolder = when(component.identificationStrategy) {")
             funBuilder.beginControlFlow("FragmentIdentificationStrategy.CLASS -> {")
+            val typeSpecOfStateHolder = stateHoldersForComponents[fragmentToStateEntry.key]!!
             val fragStateHolderFieldNameForClass =
-                "${lowercaseFirstLetter(classDeclOfFrag.simpleName.asString())}StateByClass"
+                "${lowercaseFirstLetter(typeSpecOfStateHolder.name!!)}ByClass"
             funBuilder.addStatement(
                 "stateHolder.$fragStateHolderFieldNameForClass"
             )
             funBuilder.endControlFlow() // close is (CLASS)
             funBuilder.beginControlFlow("FragmentIdentificationStrategy.TAG -> {")
             val fragStateHolderFieldNameForTag =
-                "${lowercaseFirstLetter(classDeclOfFrag.simpleName.asString())}StateByTag"
+                "${lowercaseFirstLetter(typeSpecOfStateHolder.name!!)}ByTag"
             funBuilder.beginControlFlow("if (component.tag == null) {")
             funBuilder.addStatement(
                 "throw RuntimeException(\"Fragment@\${Integer.toHexString(System.identityHashCode(component))} of type " +
@@ -1043,7 +848,7 @@ class NoVMProcessor(
             funBuilder.endControlFlow() // close is (TAG)
             funBuilder.beginControlFlow("FragmentIdentificationStrategy.ID -> {")
             val fragStateHolderFieldNameForId =
-                "${lowercaseFirstLetter(classDeclOfFrag.simpleName.asString())}StateById"
+                "${lowercaseFirstLetter(typeSpecOfStateHolder.name!!)}ById"
             funBuilder.addStatement(
                 "stateHolder.$fragStateHolderFieldNameForId[component.id]"
             )
@@ -1055,7 +860,6 @@ class NoVMProcessor(
             configChangeProps.forEach { ksPropertyDeclaration ->
                 // need to find equivalent field in state holder for this activity
                 // need to check for null in stateholder prop
-                val typeSpecOfStateHolder = stateHoldersForComponents[fragmentToStateEntry.key]!!
                 val equivPropInStateHolder =
                     typeSpecOfStateHolder.propertySpecs.first { it.name == ksPropertyDeclaration.simpleName.asString() }
                 if (equivPropInStateHolder.type.isNullable && !ksPropertyDeclaration.type.resolve().isMarkedNullable) {
@@ -1115,7 +919,7 @@ class NoVMProcessor(
         // TODO instead of manually recreating names below
         val funBuilder = generateSaveStateConfigChangeSignature(packageName)
             .addModifiers(KModifier.OVERRIDE)
-            .addStatement("val stateHolder = GeneratedStateHolder()")
+            .addStatement("val stateHolder = ${topLevelStateHolder.name!!}()")
             .beginControlFlow("when (component) {")
 
         val activitiesToStates = componentToStateMap.filter { entry ->
@@ -1132,12 +936,12 @@ class NoVMProcessor(
         funBuilder.beginControlFlow("is $COMPONENT_ACTIVITY_QUALIFIED_NAME -> {")
         funBuilder.beginControlFlow("when (component) {")
         activitiesToStates.forEach { activityToStateEntry ->
-            val classDeclOfActivity = resolver.getClassDeclarationByName(activityToStateEntry.key)!!
+            val stateHolderTypeSpec = stateHoldersForComponents[activityToStateEntry.key]!!
             funBuilder.beginControlFlow("is ${activityToStateEntry.key} -> {")
             val activityStateHolderFieldName =
-                "${lowercaseFirstLetter(classDeclOfActivity.simpleName.asString())}State"
+                lowercaseFirstLetter(stateHolderTypeSpec.name!!)
             funBuilder.addStatement(
-                "stateHolder.$activityStateHolderFieldName = ${classDeclOfActivity.simpleName.asString()}State()"
+                "stateHolder.$activityStateHolderFieldName = ${stateHolderTypeSpec.name!!}()"
             )
             activityToStateEntry.value.filter { ksPropertyDeclaration ->
                 ksPropertyDeclaration.getAnnotationsByType(Retain::class).toList()
@@ -1173,7 +977,7 @@ class NoVMProcessor(
         funBuilder.beginControlFlow("is $DEFAULT_PACKAGE_NAME.$DEFAULT_STATE_SAVING_FRAGMENT_SIMPLE_NAME -> {")
         funBuilder.beginControlFlow("when (component) {")
         fragmentsToStates.forEach { fragmentToStateEntry ->
-            val classDeclOfFrag = resolver.getClassDeclarationByName(fragmentToStateEntry.key)!!
+            val fragmentStateHolderTypeSpec = stateHoldersForComponents[fragmentToStateEntry.key]!!
             val configChangeProps = fragmentToStateEntry.value.filter { ksPropertyDeclaration ->
                 ksPropertyDeclaration.getAnnotationsByType(Retain::class).toList()
                     .first().across.contains(StateDestroyingEvent.CONFIGURATION_CHANGE)
@@ -1182,9 +986,9 @@ class NoVMProcessor(
             funBuilder.beginControlFlow("when(component.identificationStrategy) {")
             funBuilder.beginControlFlow("FragmentIdentificationStrategy.CLASS -> {")
             val fragStateHolderFieldNameForClass =
-                "${lowercaseFirstLetter(classDeclOfFrag.simpleName.asString())}StateByClass"
+                "${lowercaseFirstLetter(fragmentStateHolderTypeSpec.name!!)}ByClass"
             funBuilder.addStatement(
-                "stateHolder.$fragStateHolderFieldNameForClass = ${classDeclOfFrag.simpleName.asString()}State()"
+                "stateHolder.$fragStateHolderFieldNameForClass = ${fragmentStateHolderTypeSpec.name!!}()"
             )
             configChangeProps.forEach { ksPropertyDeclaration ->
                 // during save, nullability doesn't matter, but lateinit does
@@ -1212,14 +1016,14 @@ class NoVMProcessor(
             funBuilder.endControlFlow() // close is (CLASS)
             funBuilder.beginControlFlow("FragmentIdentificationStrategy.TAG -> {")
             val fragStateHolderFieldNameForTag =
-                "${lowercaseFirstLetter(classDeclOfFrag.simpleName.asString())}StateByTag"
+                "${lowercaseFirstLetter(fragmentStateHolderTypeSpec.name!!)}ByTag"
             funBuilder.beginControlFlow("if (component.tag == null) {")
             funBuilder.addStatement(
                 "throw RuntimeException(\"Fragment@\${Integer.toHexString(System.identityHashCode(component))} of type " +
-                        "${classDeclOfFrag.qualifiedName!!.asString()} has identificationStrategy of TAG but Fragment's tag field is null\")"
+                        "${fragmentToStateEntry.key} has identificationStrategy of TAG but Fragment's tag field is null\")"
             )
             funBuilder.endControlFlow()
-            funBuilder.addStatement("val fragStateHolder = ${classDeclOfFrag.simpleName.asString()}State()")
+            funBuilder.addStatement("val fragStateHolder = ${fragmentStateHolderTypeSpec.name!!}()")
             configChangeProps.forEach { ksPropertyDeclaration ->
                 // during save, nullability doesn't matter
                 if (ksPropertyDeclaration.modifiers.contains(Modifier.LATEINIT)) {
@@ -1249,8 +1053,8 @@ class NoVMProcessor(
             funBuilder.endControlFlow() // close is (TAG)
             funBuilder.beginControlFlow("FragmentIdentificationStrategy.ID -> {")
             val fragStateHolderFieldNameForId =
-                "${lowercaseFirstLetter(classDeclOfFrag.simpleName.asString())}StateById"
-            funBuilder.addStatement("val fragStateHolder = ${classDeclOfFrag.simpleName.asString()}State()")
+                "${lowercaseFirstLetter(fragmentStateHolderTypeSpec.name!!)}ById"
+            funBuilder.addStatement("val fragStateHolder = ${fragmentStateHolderTypeSpec.name!!}()")
             configChangeProps.forEach { ksPropertyDeclaration ->
                 // during save, nullability doesn't matter
                 if (ksPropertyDeclaration.modifiers.contains(Modifier.LATEINIT)) {
@@ -1298,13 +1102,13 @@ class NoVMProcessor(
             .addSuperinterface(ClassName(DEFAULT_PACKAGE_NAME, "StateHolder"))
         componentToStateMap.forEach { componentEntry ->
             val stateHolderEntry =
-                stateHoldersForComponents.entries.first { it.key == componentEntry.key }
+                stateHoldersForComponents[componentEntry.key]!!
             val classDecl = resolver.getClassDeclarationByName(componentEntry.key)!!
             if (isSubclassOf(classDecl, COMPONENT_ACTIVITY_QUALIFIED_NAME)) {
                 builder.addProperty(
                     PropertySpec.builder(
-                        lowercaseFirstLetter(stateHolderEntry.value.name!!),
-                        ClassName(packageName, stateHolderEntry.value.name!!).copy(nullable = true)
+                        lowercaseFirstLetter(stateHolderEntry.name!!),
+                        ClassName(packageName, stateHolderEntry.name!!).copy(nullable = true)
                     )
                         .mutable(true)
                         .initializer("%L", null)
@@ -1317,8 +1121,8 @@ class NoVMProcessor(
             ) {
                 builder.addProperty(
                     PropertySpec.builder(
-                        "${lowercaseFirstLetter(stateHolderEntry.value.name!!)}ByClass",
-                        ClassName(packageName, stateHolderEntry.value.name!!).copy(nullable = true)
+                        "${lowercaseFirstLetter(stateHolderEntry.name!!)}ByClass",
+                        ClassName(packageName, stateHolderEntry.name!!).copy(nullable = true)
                     )
                         .mutable(true)
                         .initializer("%L", null)
@@ -1327,16 +1131,16 @@ class NoVMProcessor(
                 val mutableMapIntToHolder = MUTABLE_MAP
                     .parameterizedBy(
                         INT,
-                        ClassName(packageName, stateHolderEntry.value.name!!)
+                        ClassName(packageName, stateHolderEntry.name!!)
                     )
                 val mutableMapStringToHolder = MUTABLE_MAP
                     .parameterizedBy(
                         STRING,
-                        ClassName(packageName, stateHolderEntry.value.name!!)
+                        ClassName(packageName, stateHolderEntry.name!!)
                     )
                 builder.addProperty(
                     PropertySpec.builder(
-                        "${lowercaseFirstLetter(stateHolderEntry.value.name!!)}ById",
+                        "${lowercaseFirstLetter(stateHolderEntry.name!!)}ById",
                         mutableMapIntToHolder
                     )
                         .mutable(true)
@@ -1345,7 +1149,7 @@ class NoVMProcessor(
                 )
                 builder.addProperty(
                     PropertySpec.builder(
-                        "${lowercaseFirstLetter(stateHolderEntry.value.name!!)}ByTag",
+                        "${lowercaseFirstLetter(stateHolderEntry.name!!)}ByTag",
                         mutableMapStringToHolder
                     )
                         .mutable(true)
@@ -1366,11 +1170,18 @@ class NoVMProcessor(
         componentToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>>
     ): MutableMap<String, TypeSpec> {
         val ret = mutableMapOf<String, TypeSpec>()
+        val simpleNames = mutableSetOf<String>()
         componentToStateMap.forEach { entry ->
-            val componentName =
-                resolver.getClassDeclarationByName(entry.key)!!.simpleName.asString()
+            val classDecl = resolver.getClassDeclarationByName(entry.key)!!
+            val componentStateHolderPrefix = if (simpleNames.contains(classDecl.simpleName.asString())) {
+                classDecl.qualifiedName!!.asString().replace('.', '_')
+            } else {
+                classDecl.simpleName.asString()
+            }
+            val componentStateHolderName = componentStateHolderPrefix + "State"
+            simpleNames.add(componentStateHolderPrefix)
             val typeSpecBuilder =
-                TypeSpec.classBuilder(componentName + "State") // TODO dangerous, check for collisions
+                TypeSpec.classBuilder(componentStateHolderName)
             entry.value.forEach { propDecl ->
                 val retainAnn = propDecl.getAnnotationsByType(Retain::class).toList().first()
                 // only put into the state holder if we're retaining across config change

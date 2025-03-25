@@ -181,21 +181,25 @@ class NoVMProcessor(
                 .build()
             )
 
-        val alreadyDeclaredByThisModule = mutableSetOf<String>()
+        val fieldsDeclaredByThisModule = mutableSetOf<String>()
+        val fieldsDeclaredByAnotherModuleMemo = mutableMapOf<String, MutableSet<String>>()
         componentToStateMap.keys.forEach { componentFullyQualified ->
             val pkg = resolver.getClassDeclarationByName(componentFullyQualified)!!.packageName.asString()
             val pkgUnderscore = pkg.replace('.', '_')
             // need to check for properties that may already exist with the same package name
-            // TODO this is slow and this getDeclarations.. should be memoized
-            val alreadyDeclaredByAnotherModule = resolver.getDeclarationsFromPackage(pkg).firstOrNull { it.simpleName.asString() == pkgUnderscore } != null
-            if (!alreadyDeclaredByAnotherModule && !alreadyDeclaredByThisModule.contains(pkgUnderscore)) {
+            val declaredByAnotherModule = if (fieldsDeclaredByAnotherModuleMemo.containsKey(pkg)) {
+                fieldsDeclaredByAnotherModuleMemo[pkg]!!.contains(pkgUnderscore)
+            } else {
+                resolver.getDeclarationsFromPackage(pkg).firstOrNull { it.simpleName.asString() == pkgUnderscore } != null
+            }
+            if (!declaredByAnotherModule && !fieldsDeclaredByThisModule.contains(pkgUnderscore)) {
                 fileBuilder
                     .addProperty(
                         PropertySpec.builder(pkgUnderscore, INT, KModifier.CONST)
                             .initializer("%L", "0")
                             .build()
                     )
-                alreadyDeclaredByThisModule.add(pkgUnderscore)
+                fieldsDeclaredByThisModule.add(pkgUnderscore)
             }
         }
         fileBuilder

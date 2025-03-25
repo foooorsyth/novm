@@ -180,19 +180,22 @@ class NoVMProcessor(
                 .initializer("%L", "0")
                 .build()
             )
+
+        val alreadyDeclaredByThisModule = mutableSetOf<String>()
         componentToStateMap.keys.forEach { componentFullyQualified ->
             val pkg = resolver.getClassDeclarationByName(componentFullyQualified)!!.packageName.asString()
             val pkgUnderscore = pkg.replace('.', '_')
             // need to check for properties that may already exist with the same package name
             // TODO this is slow and this getDeclarations.. should be memoized
-            val alreadyDeclared = resolver.getDeclarationsFromPackage(pkg).firstOrNull { it.simpleName.asString() == pkgUnderscore } != null
-            if (!alreadyDeclared) {
+            val alreadyDeclaredByAnotherModule = resolver.getDeclarationsFromPackage(pkg).firstOrNull { it.simpleName.asString() == pkgUnderscore } != null
+            if (!alreadyDeclaredByAnotherModule && !alreadyDeclaredByThisModule.contains(pkgUnderscore)) {
                 fileBuilder
                     .addProperty(
                         PropertySpec.builder(pkgUnderscore, INT, KModifier.CONST)
                             .initializer("%L", "0")
                             .build()
                     )
+                alreadyDeclaredByThisModule.add(pkgUnderscore)
             }
         }
         fileBuilder

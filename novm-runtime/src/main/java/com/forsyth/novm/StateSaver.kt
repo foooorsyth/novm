@@ -3,14 +3,14 @@ package com.forsyth.novm
 import android.os.Bundle
 
 interface StateSaver {
-    fun saveStateConfigChange(component: Any): StateHolder
+    fun saveStateConfigChange(component: Any, stateHolder: StateHolder? = null): StateHolder
     fun restoreStateConfigChange(component: Any, stateHolder: StateHolder)
     fun saveStateBundle(component: Any, bundle: Bundle)
     fun restoreStateBundle(component: Any, bundle: Bundle)
 }
 
 class EmptyStateSaver : StateSaver {
-    override fun saveStateConfigChange(component: Any): StateHolder { return EmptyStateHolder() }
+    override fun saveStateConfigChange(component: Any, stateHolder: StateHolder?): StateHolder { return EmptyStateHolder() }
     override fun restoreStateConfigChange(component: Any, stateHolder: StateHolder) { }
     override fun saveStateBundle(component: Any, bundle: Bundle) { }
     override fun restoreStateBundle(component: Any, bundle: Bundle) { }

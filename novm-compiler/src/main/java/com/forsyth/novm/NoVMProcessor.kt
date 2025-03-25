@@ -936,6 +936,13 @@ class NoVMProcessor(
                 )
                     .build()
             )
+            .addParameter(
+                ParameterSpec.builder(
+                    "stateHolder",
+                    ClassName("com.forsyth.novm", "StateHolder").copy(nullable = true)
+                )
+                    .build()
+            )
             .returns(ClassName(packageName, "StateHolder"))
     }
 
@@ -949,7 +956,10 @@ class NoVMProcessor(
     ): FunSpec {
         val funBuilder = generateSaveStateConfigChangeSignature(packageName)
             .addModifiers(KModifier.OVERRIDE)
-            .addStatement("val stateHolder = ${topLevelStateHolder.name!!}()")
+            .beginControlFlow("if (stateHolder != null && !(stateHolder is ${topLevelStateHolder.name!!})) {")
+            .addStatement("return stateHolder // spit it right back out, don't know how to handle it")
+            .endControlFlow()
+            .addStatement("@Suppress(\"NAME_SHADOWING\") val stateHolder = if (stateHolder == null) ${topLevelStateHolder.name!!}() else (stateHolder as GeneratedStateHolder)")
             .beginControlFlow("when (component) {")
 
         val activitiesToStates = componentToStateMap.filter { entry ->
@@ -1067,13 +1077,13 @@ class NoVMProcessor(
                     funBuilder.endControlFlow()
                     funBuilder.beginControlFlow("if (isInitialized) {")
                     funBuilder.addStatement(
-                        "stateHolder.$fragStateHolderFieldNameForClass!!.${ksPropertyDeclaration.simpleName.asString()} = component.${ksPropertyDeclaration.simpleName.asString()}"
+                        "fragStateHolder.${ksPropertyDeclaration.simpleName.asString()} = component.${ksPropertyDeclaration.simpleName.asString()}"
                     )
                     funBuilder.endControlFlow()
                     funBuilder.endControlFlow()
                 } else {
                     funBuilder.addStatement(
-                        "stateHolder.$fragStateHolderFieldNameForClass!!.${ksPropertyDeclaration.simpleName.asString()} = component.${ksPropertyDeclaration.simpleName.asString()}"
+                        "fragStateHolder.${ksPropertyDeclaration.simpleName.asString()} = component.${ksPropertyDeclaration.simpleName.asString()}"
                     )
                 }
             }
@@ -1098,13 +1108,13 @@ class NoVMProcessor(
                     funBuilder.endControlFlow()
                     funBuilder.beginControlFlow("if (isInitialized) {")
                     funBuilder.addStatement(
-                        "stateHolder.$fragStateHolderFieldNameForClass!!.${ksPropertyDeclaration.simpleName.asString()} = component.${ksPropertyDeclaration.simpleName.asString()}"
+                        "fragStateHolder.${ksPropertyDeclaration.simpleName.asString()} = component.${ksPropertyDeclaration.simpleName.asString()}"
                     )
                     funBuilder.endControlFlow()
                     funBuilder.endControlFlow()
                 } else {
                     funBuilder.addStatement(
-                        "stateHolder.$fragStateHolderFieldNameForClass!!.${ksPropertyDeclaration.simpleName.asString()} = component.${ksPropertyDeclaration.simpleName.asString()}"
+                        "fragStateHolder.${ksPropertyDeclaration.simpleName.asString()} = component.${ksPropertyDeclaration.simpleName.asString()}"
                     )
                 }
             }
@@ -1113,7 +1123,6 @@ class NoVMProcessor(
             )
             funBuilder.endControlFlow() // close is (ID)
             funBuilder.endControlFlow() // close when (id strat)
-
             funBuilder.endControlFlow() // close is (specific fragment)
         }
         funBuilder.endControlFlow() // close is (fragment)

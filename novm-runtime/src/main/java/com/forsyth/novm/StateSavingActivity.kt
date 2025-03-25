@@ -15,12 +15,13 @@ open class StateSavingActivity : AppCompatActivity() {
     }
 
     val stateSaver: StateSaver = provideStateSaver()
+    private var jitStateHolder: StateHolder? = null
 
-    private val attachListener = FragmentOnAttachListener { fragmentManager, fragment ->
-        fragment.lifecycle.addObserver(lifecycleObserver)
+    private val fragmentAttachListener = FragmentOnAttachListener { fragmentManager, fragment ->
+        fragment.lifecycle.addObserver(fragmentLifecycleObserver)
     }
 
-    private val lifecycleObserver = object : DefaultLifecycleObserver {
+    private val fragmentLifecycleObserver = object : DefaultLifecycleObserver {
         override fun onCreate(owner: LifecycleOwner) {
             @Suppress("DEPRECATION")
             (lastCustomNonConfigurationInstance as? StateHolder)?.let { retainedState ->
@@ -30,7 +31,10 @@ open class StateSavingActivity : AppCompatActivity() {
 
         override fun onDestroy(owner: LifecycleOwner) {
             if (this@StateSavingActivity.isChangingConfigurations) {
-                stateSaver.saveStateConfigChange(owner)
+                val sh = stateSaver.saveStateConfigChange(owner, jitStateHolder)
+                if (jitStateHolder == null) {
+                    jitStateHolder = sh
+                }
             }
         }
     }
@@ -39,8 +43,8 @@ open class StateSavingActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         // NOTE: this listener MUST be setup before super.onCreate is called
         // otherwise, after configuration change, fragments will re-attach
-        // BEFORE onAttachListener is added, making the listener useless (it won't get hit)
-        supportFragmentManager.addFragmentOnAttachListener(attachListener)
+        // BEFORE onAttachListener is added, making the listener useless
+        supportFragmentManager.addFragmentOnAttachListener(fragmentAttachListener)
         super.onCreate(savedInstanceState)
         @Suppress("DEPRECATION")
         (lastCustomNonConfigurationInstance as? StateHolder)?.let { retainedState ->
@@ -60,6 +64,10 @@ open class StateSavingActivity : AppCompatActivity() {
     @CallSuper
     @Suppress("OVERRIDE_DEPRECATION")
     override fun onRetainCustomNonConfigurationInstance(): Any? {
-        return stateSaver.saveStateConfigChange(this)
+        val sh = stateSaver.saveStateConfigChange(this, jitStateHolder)
+        if (jitStateHolder == null) {
+            jitStateHolder = sh
+        }
+        return jitStateHolder
     }
 }

@@ -72,8 +72,7 @@ class NoVMProcessor(
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
         isDebugLoggingEnabled = options[OPTION_DEBUG_LOGGING]?.lowercase() == "true"
-        val isLibrary = options[OPTION_IS_DEPENDENCY]?.lowercase() == "true"
-        val ret = if (isLibrary) {
+        val ret = if (options[OPTION_IS_DEPENDENCY]?.lowercase() == "true") {
             processDependency(resolver)
         } else {
             processApp(resolver)
@@ -162,18 +161,20 @@ class NoVMProcessor(
         )
         // class declaration cache (lookups in this module)
         val classDeclMemo = mutableMapOf<String, KSClassDeclaration>()
-        // names of fields in the *.dependencies package that this module has/will declare
-        val pkgWithUnderscoresDeclaredByThisModule = mutableSetOf<String>()
         val pkgWithUnderscoresDeclaredByAnotherModule: Set<String> = takenSymbols
             .filter { !it.simpleName.asString().startsWith(DEPENDENCY_FILENAME_PROPERTY_PREFIX) }
             .map { it.simpleName.asString() }
             .toSet()
         val orderedPkgWithUnderscoresDeclaredByThisModules = mutableListOf<String>()
+        // names of fields in the *.dependencies package that this module has/will declare
+        val pkgWithUnderscoresDeclaredByThisModule = mutableSetOf<String>()
         componentToStateMap.keys.forEach { componentFullyQualified ->
             val componentClassDecl = if (classDeclMemo.contains(componentFullyQualified)) {
                 classDeclMemo[componentFullyQualified]!!
             } else {
-                resolver.getClassDeclarationByName(componentFullyQualified)!!
+                val ret = resolver.getClassDeclarationByName(componentFullyQualified)!!
+                classDeclMemo[componentFullyQualified] = ret
+                ret
             }
             val pkgOfComponent = componentClassDecl.packageName.asString()
             val pkgUnderscore = pkgOfComponent.replace('.', '_')
@@ -222,9 +223,13 @@ class NoVMProcessor(
                         .build()
                 )
         }
+        val componentContainingFiles =
+            classDeclMemo.values.mapNotNull { classDecl->
+                classDecl.containingFile
+            }.toSet().toList() // duplicates
         fileBuilder
             .build()
-            .writeTo(codeGenerator, Dependencies(aggregating = false))
+            .writeTo(codeGenerator, Dependencies(aggregating = true, *componentContainingFiles.toTypedArray()))
         return emptyList()
     }
 
@@ -292,7 +297,7 @@ class NoVMProcessor(
         val componentContainingFiles =
             componentToStateMap.keys.mapNotNull { componentFullyQualified ->
                 resolver.getClassDeclarationByName(componentFullyQualified)?.containingFile
-            }
+            }.toSet().toList()
         val noVMDynamicFileName = "NoVMDynamic"
         val stateHoldersForComponents =
             generateStateHoldersForComponents(resolver, componentToStateMap)
@@ -318,7 +323,7 @@ class NoVMProcessor(
             .addType(topLevelStateHolder)
             .addType(generatedStateSaver)
             .build()
-            .writeTo(codeGenerator, Dependencies(true, *componentContainingFiles.toTypedArray()))
+            .writeTo(codeGenerator, Dependencies(aggregating = true, *componentContainingFiles.toTypedArray()))
     }
 
     private fun generateStateSaver(

@@ -3,10 +3,14 @@
 
     <application>
         <activity
+            android:name=".subpkg2.ChampagneActivity"
+            android:exported="false" />
+        <activity
             android:name=".IntentionalNameCollisionActivity"
             android:exported="true" />
         <activity
             android:name=".AnotherLibraryActivity"
             android:exported="true" />
     </application>
+
 </manifest>

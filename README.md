@@ -119,3 +119,13 @@ by consumers:
 -keep class androidx.activity.ComponentActivity { *; }
 -keep class androidx.fragment.app.Fragment { *; }
 ```
+
+### Reporting bugs
+
+To report a bug, enable debug logging and open a GitHub issue with a trace
+
+```kotlin
+ksp {
+    arg("novm.debugLogging", "true")
+}
+```

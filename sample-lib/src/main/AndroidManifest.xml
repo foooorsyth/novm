@@ -3,6 +3,9 @@
 
     <application>
         <activity
+            android:name=".subpkg.SubPkgActivity"
+            android:exported="false" />
+        <activity
             android:name=".IntentionalNameCollisionActivity"
             android:exported="true" />
         <activity

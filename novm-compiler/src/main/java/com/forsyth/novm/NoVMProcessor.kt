@@ -31,6 +31,7 @@ import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.ksp.toClassName
 import com.squareup.kotlinpoet.ksp.toTypeName
 import com.squareup.kotlinpoet.ksp.writeTo
+import java.security.MessageDigest
 import java.util.Locale
 import kotlin.random.Random
 
@@ -40,7 +41,6 @@ const val FRAGMENT_QUALIFIED_NAME = "androidx.fragment.app.Fragment"
 const val DEFAULT_PACKAGE_NAME = "com.forsyth.novm"
 const val DEFAULT_DEPENDENCY_PACKAGE_NAME = "com.forsyth.novm.dependencies"
 const val DEPENDENCY_FILENAME_PROPERTY_PREFIX = "novm_"
-const val DEFAULT_STATE_SAVING_ACTIVITY_SIMPLE_NAME = "StateSavingActivity"
 const val DEFAULT_STATE_SAVING_FRAGMENT_SIMPLE_NAME = "StateSavingFragment"
 const val OPTION_IS_DEPENDENCY = "novm.isDependency"
 const val OPTION_DEBUG_LOGGING = "novm.debugLogging"
@@ -98,6 +98,7 @@ class NoVMProcessor(
         // TODO search nested class eventually, for now just components at the top level of package
         val topLvlClassDcls = pkgDecls
             .filterIsInstance(KSPropertyDeclaration::class.java)
+            .filterNot { it.simpleName.asString().startsWith(DEPENDENCY_FILENAME_PROPERTY_PREFIX) }
             .map { it.simpleName.asString().replace('_', '.') }
             .map { pkgContainingRetains ->
                 logd("pkgContainingRetains: $pkgContainingRetains")
@@ -145,25 +146,12 @@ class NoVMProcessor(
 
     @OptIn(KspExperimental::class)
     private fun processDependency(resolver: Resolver) : List<KSAnnotated> {
-        if (pass != 1) { // only do this once, no matter what
+        val takenSymbols = resolver.getDeclarationsFromPackage(DEFAULT_DEPENDENCY_PACKAGE_NAME)
+        val retainSymbols = resolver.getSymbolsWithAnnotation(Retain::class.qualifiedName!!, false).toList()
+        logd("retain symbols size: ${retainSymbols.size}")
+        if (retainSymbols.isEmpty()) {
             return emptyList()
         }
-        val takenFileNames = resolver.getDeclarationsFromPackage(DEFAULT_DEPENDENCY_PACKAGE_NAME)
-            .filter {
-               it.simpleName.asString().startsWith(DEPENDENCY_FILENAME_PROPERTY_PREFIX)
-            }
-            .map { it.simpleName.asString().substring(DEPENDENCY_FILENAME_PROPERTY_PREFIX.length) }
-            .toSet()
-        var randomFileName: String
-        do {
-            randomFileName = generateRandomAlphanumeric() // non-deterministic build plugin LUL
-        } while (takenFileNames.contains(randomFileName))
-
-        val retainSymbols = resolver.getSymbolsWithAnnotation(Retain::class.qualifiedName!!, false).toList()
-        val fileBuilder = FileSpec.builder(
-            DEFAULT_DEPENDENCY_PACKAGE_NAME,
-            randomFileName// non-deterministic build tool LUL
-        )
         val componentToStateMap: MutableMap<String, MutableList<KSPropertyDeclaration>> =
             mutableMapOf()
         val recheck = mutableListOf<KSAnnotated>()
@@ -172,35 +160,67 @@ class NoVMProcessor(
             recheck,
             componentToStateMap
         )
+        // class declaration cache (lookups in this module)
+        val classDeclMemo = mutableMapOf<String, KSClassDeclaration>()
+        // names of fields in the *.dependencies package that this module has/will declare
+        val pkgWithUnderscoresDeclaredByThisModule = mutableSetOf<String>()
+        val pkgWithUnderscoresDeclaredByAnotherModule: Set<String> = takenSymbols
+            .filter { !it.simpleName.asString().startsWith(DEPENDENCY_FILENAME_PROPERTY_PREFIX) }
+            .map { it.simpleName.asString() }
+            .toSet()
+        val orderedPkgWithUnderscoresDeclaredByThisModules = mutableListOf<String>()
+        componentToStateMap.keys.forEach { componentFullyQualified ->
+            val componentClassDecl = if (classDeclMemo.contains(componentFullyQualified)) {
+                classDeclMemo[componentFullyQualified]!!
+            } else {
+                resolver.getClassDeclarationByName(componentFullyQualified)!!
+            }
+            val pkgOfComponent = componentClassDecl.packageName.asString()
+            val pkgUnderscore = pkgOfComponent.replace('.', '_')
+            // need to check for properties that may already exist with the same package name
+            if (!pkgWithUnderscoresDeclaredByAnotherModule.contains(pkgUnderscore) &&
+                !pkgWithUnderscoresDeclaredByThisModule.contains(pkgUnderscore)) {
+                orderedPkgWithUnderscoresDeclaredByThisModules.add(pkgUnderscore)
+                pkgWithUnderscoresDeclaredByThisModule.add(pkgUnderscore)
+            }
+        }
+        val takenFileNames = takenSymbols
+            .filter {
+                it.simpleName.asString().startsWith(DEPENDENCY_FILENAME_PROPERTY_PREFIX)
+            }
+            .map { it.simpleName.asString().substring(DEPENDENCY_FILENAME_PROPERTY_PREFIX.length) }
+            .toSet()
+        logd("orderedPkgs: $orderedPkgWithUnderscoresDeclaredByThisModules")
+        val concatenatedNewPkgFields = orderedPkgWithUnderscoresDeclaredByThisModules.joinToString("_"){ it }
+        logd("concatenatedNewPkgFields: $concatenatedNewPkgFields")
+        var md5FileName: String? = null
+        do {
+            if (md5FileName == null) {
+                md5FileName = concatenatedNewPkgFields.toMD5().takeLast(7)
+            } else {
+                md5FileName += "1"
+            }
+        } while (takenFileNames.contains(md5FileName))
+        logd("md5 file name: $md5FileName")
+        val fileBuilder = FileSpec.builder(
+            DEFAULT_DEPENDENCY_PACKAGE_NAME,
+            md5FileName!!
+        )
         fileBuilder
             .addProperty(
                 PropertySpec.builder(
-                    DEPENDENCY_FILENAME_PROPERTY_PREFIX + randomFileName, INT, KModifier.CONST
+                    DEPENDENCY_FILENAME_PROPERTY_PREFIX + md5FileName, INT, KModifier.CONST
                 )
-                .initializer("%L", "0")
-                .build()
+                    .initializer("%L", "0")
+                    .build()
             )
-
-        val fieldsDeclaredByThisModule = mutableSetOf<String>()
-        val fieldsDeclaredByAnotherModuleMemo = mutableMapOf<String, MutableSet<String>>()
-        componentToStateMap.keys.forEach { componentFullyQualified ->
-            val pkg = resolver.getClassDeclarationByName(componentFullyQualified)!!.packageName.asString()
-            val pkgUnderscore = pkg.replace('.', '_')
-            // need to check for properties that may already exist with the same package name
-            val declaredByAnotherModule = if (fieldsDeclaredByAnotherModuleMemo.containsKey(pkg)) {
-                fieldsDeclaredByAnotherModuleMemo[pkg]!!.contains(pkgUnderscore)
-            } else {
-                resolver.getDeclarationsFromPackage(pkg).firstOrNull { it.simpleName.asString() == pkgUnderscore } != null
-            }
-            if (!declaredByAnotherModule && !fieldsDeclaredByThisModule.contains(pkgUnderscore)) {
-                fileBuilder
-                    .addProperty(
-                        PropertySpec.builder(pkgUnderscore, INT, KModifier.CONST)
-                            .initializer("%L", "0")
-                            .build()
-                    )
-                fieldsDeclaredByThisModule.add(pkgUnderscore)
-            }
+        orderedPkgWithUnderscoresDeclaredByThisModules.forEach { pkgUnderscore ->
+            fileBuilder
+                .addProperty(
+                    PropertySpec.builder(pkgUnderscore, INT, KModifier.CONST)
+                        .initializer("%L", "0")
+                        .build()
+                )
         }
         fileBuilder
             .build()
@@ -1253,4 +1273,9 @@ class NoVMProcessor(
         }
         return ret
     }
+}
+
+fun String.toMD5(): String {
+    val bytes = MessageDigest.getInstance("MD5").digest(this.toByteArray())
+    return bytes.joinToString("") { "%02x".format(it) }
 }

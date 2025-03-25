@@ -116,7 +116,6 @@ by consumers:
 
 ```
 -keep class com.forsyth.novm.** { *; }
--keep class com.forsyth.novm.dependencies.** { *; }
 -keep class androidx.activity.ComponentActivity { *; }
 -keep class androidx.fragment.app.Fragment { *; }
 ```

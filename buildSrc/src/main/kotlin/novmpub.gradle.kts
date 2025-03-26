@@ -2,7 +2,7 @@ object Publishing {
     const val GROUP = "com.forsyth.novm"
     const val ARTIFACT_ID_RUNTIME = "novm-runtime"
     const val ARTIFACT_ID_COMPILER = "novm-compiler"
-    const val VERSION = "0.9.0"
+    const val VERSION = "1.0.0"
     const val PROJ_NAME_RUNTIME = "novm runtime"
     const val PROJ_NAME_COMPILER = "novm compiler"
     const val PROJ_DESC = "ditch your ViewModels"

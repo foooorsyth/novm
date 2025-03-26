@@ -7,7 +7,7 @@ First, [add the ksp plugin to your project](https://developer.android.com/build/
 Then, add the novm runtime and compiler to your module's build.gradle.kts file:
 ```kotlin
 dependencies {
-    val novm_version = "0.9.0"
+    val novm_version = "1.0.0"
     implementation("com.forsyth.novm:novm-runtime:$novm_version")
     ksp("com.forsyth.novm:novm-compiler:$novm_version")
 }

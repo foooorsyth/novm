@@ -19,17 +19,16 @@ jobs:
 
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
-#    - name: Publish to Maven Central
-#      env:
-#        # Can't do lowercase env vars in the UI? arbitrage here
-#        ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.ORG_GRADLE_PROJECT_MAVENCENTRALUSERNAME }}
-#        ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.ORG_GRADLE_PROJECT_MAVENCENTRALPASSWORD }}
-#        ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.ORG_GRADLE_PROJECT_SIGNINGINMEMORYKEY }}
-#        ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.ORG_GRADLE_PROJECT_SIGNINGINMEMORYKEYPASSWORD }}
-#        SNAPSHOT: "SNAPSHOT"
-#      run: ./gradlew publishAllPublicationsToMavenCentralRepository
+    - name: Publish to Maven Central
+      env:
+        # Can't do lowercase env vars in the UI? arbitrage here
+        ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.ORG_GRADLE_PROJECT_MAVENCENTRALUSERNAME }}
+        ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.ORG_GRADLE_PROJECT_MAVENCENTRALPASSWORD }}
+        ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.ORG_GRADLE_PROJECT_SIGNINGINMEMORYKEY }}
+        ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.ORG_GRADLE_PROJECT_SIGNINGINMEMORYKEYPASSWORD }}
+        SNAPSHOT: "SNAPSHOT"
+      run: ./gradlew publishAllPublicationsToMavenCentralRepository
     - name: Purge Camo
       env:
         NOVM_GH_BADGE_URL: ${{ vars.NOVM_GH_BADGE_URL }}
-        TEST: ${{ vars.TEST }}
-      run: echo "purging $NOVM_GH_BADGE_URL" && echo "test $TEST" && ./purge_gh_badge.sh
+      run: echo "purging $NOVM_GH_BADGE_URL" && ./purge_gh_badge.sh

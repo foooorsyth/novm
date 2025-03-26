@@ -30,5 +30,6 @@ jobs:
 #      run: ./gradlew publishAllPublicationsToMavenCentralRepository
     - name: Purge Camo
       env:
-        NOVM_GH_BADGE_URL: ${{ env.NOVM_GH_BADGE_URL }}
+        NOVM_GH_BADGE_URL: ${{ var.NOVM_GH_BADGE_URL }}
+        TEST: ${{ var.TEST }}
       run: echo "purging $NOVM_GH_BADGE_URL" && echo "test $TEST" && ./purge_gh_badge.sh

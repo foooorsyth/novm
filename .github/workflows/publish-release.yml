@@ -26,6 +26,7 @@ jobs:
         ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.ORG_GRADLE_PROJECT_MAVENCENTRALPASSWORD }}
         ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.ORG_GRADLE_PROJECT_SIGNINGINMEMORYKEY }}
         ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.ORG_GRADLE_PROJECT_SIGNINGINMEMORYKEYPASSWORD }}
+        NOVM_GH_BADGE_URL: ${{ env.NOVM_GH_BADGE_URL }}
       run: ./gradlew publishAndReleaseToMavenCentral --no-configuration-cache
     - name: Purge Camo
       # Uses ${{ env.NOVM_GH_BADGE_URL }}

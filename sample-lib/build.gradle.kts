@@ -6,7 +6,6 @@ plugins {
 
 ksp {
     arg("novm.isDependency", "true")
-    arg("novm.debugLogging", "true")
 }
 
 android {

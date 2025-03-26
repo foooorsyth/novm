@@ -17,7 +17,7 @@ fun fakeSha256() : String {
     return "2CF24DBA5FB0A30E26E83B2AC5B9E29E1B161E5C1FA7425E73043362938B9824"
 }
 
-class MainActivity : StateSavingActivity() {
+class ViewsActivity : StateSavingActivity() {
     companion object {
         private const val TAG = "MainActivity"
     }
@@ -29,21 +29,24 @@ class MainActivity : StateSavingActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        setContentView(R.layout.activity_views)
         if (savedInstanceState == null) {
             largeImage = BitmapFactory.decodeResource(resources, R.mipmap.oxide_grey_g80)
             computedHash = fakeSha256()
             supportFragmentManager.commit {
                 setReorderingAllowed(true)
-                add<ColorFragment>(R.id.fragment_container_left, tag = "left", args = bundleOf("color" to R.color.blue))
+                add<ColorFragment>(R.id.fragment_container_left,
+                    tag = "left", args = bundleOf("color" to R.color.blue))
             }
             supportFragmentManager.commit {
                 setReorderingAllowed(true)
-                add<ColorFragment>(R.id.fragment_container_middle, tag = "middle", args = bundleOf("color" to R.color.purple))
+                add<ColorFragment>(R.id.fragment_container_middle,
+                    tag = "middle", args = bundleOf("color" to R.color.purple))
             }
             supportFragmentManager.commit {
                 setReorderingAllowed(true)
-                add<ColorFragment>(R.id.fragment_container_right, tag = "right", args = bundleOf("color" to R.color.red))
+                add<ColorFragment>(R.id.fragment_container_right,
+                    tag = "right", args = bundleOf("color" to R.color.red))
             }
         }
         findViewById<ImageView>(R.id.imageView).setImageBitmap(largeImage)

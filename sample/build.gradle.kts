@@ -49,6 +49,12 @@ dependencies {
     implementation(project(":novm-runtime"))
     implementation(project(":sample-lib"))
     implementation(project(":sample-lib-another"))
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.ui)
+    implementation(libs.androidx.ui.graphics)
+    implementation(libs.androidx.material3)
+    androidTestImplementation(libs.androidx.ui.test.junit4)
+    debugImplementation(libs.androidx.ui.test.manifest)
     ksp(project(":novm-compiler"))
 
     // region COMPOSE

@@ -26,9 +26,9 @@ class ColorFragment : StateSavingFragment() {
         }
         // Inflate the layout for this fragment
         val root = inflater.inflate(R.layout.fragment_color, container, false)
-        Log.d("TestFragment", "Ready to restore color $tag. Is it retained?")
+        Log.d(TAG, "Ready to restore color $tag. Is it retained?")
         if (colorResInt != 0) {
-            Log.d("TestFragment", "Yes it is")
+            Log.d(TAG, "Yes it is")
             root.findViewById<FrameLayout>(R.id.bg).setBackgroundColor(ContextCompat.getColor(requireActivity(), colorResInt))
         }
         return root

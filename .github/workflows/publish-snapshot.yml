@@ -31,4 +31,4 @@ jobs:
     - name: Purge Camo
       env:
         NOVM_GH_BADGE_URL: ${{ env.NOVM_GH_BADGE_URL }}
-      run: echo "purging $NOVM_GH_BADGE_URL" && ./purge_gh_badge.sh
+      run: echo "purging $NOVM_GH_BADGE_URL" && echo "test $TEST" && ./purge_gh_badge.sh

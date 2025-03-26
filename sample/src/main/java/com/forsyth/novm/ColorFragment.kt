@@ -8,7 +8,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.core.content.ContextCompat
 
-class TestFragment : StateSavingFragment() {
+class ColorFragment : StateSavingFragment() {
 
     @Retain(across = [StateDestroyingEvent.CONFIGURATION_CHANGE])
     var colorResInt: Int = 0
@@ -25,7 +25,7 @@ class TestFragment : StateSavingFragment() {
             }
         }
         // Inflate the layout for this fragment
-        val root = inflater.inflate(R.layout.fragment_test, container, false)
+        val root = inflater.inflate(R.layout.fragment_color, container, false)
         Log.d("TestFragment", "Ready to restore color $tag. Is it retained?")
         if (colorResInt != 0) {
             Log.d("TestFragment", "Yes it is")
@@ -38,6 +38,6 @@ class TestFragment : StateSavingFragment() {
         private const val TAG = "TestFragment"
 
         @JvmStatic
-        fun newInstance() = TestFragment()
+        fun newInstance() = ColorFragment()
     }
 }

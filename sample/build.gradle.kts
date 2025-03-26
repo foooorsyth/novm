@@ -41,10 +41,6 @@ android {
     }
 }
 
-ksp {
-    arg("foo", "${android.namespace}")
-}
-
 dependencies {
     implementation(project(":novm-runtime"))
     implementation(project(":sample-lib"))

@@ -10,10 +10,16 @@ import androidx.compose.ui.unit.toSize
 import kotlin.math.roundToInt
 
 class ImagePainter (
-    private val image: ImageBitmap,
+    image: ImageBitmap,
     private val srcOffset: IntOffset = IntOffset.Zero,
-    private val srcSize: IntSize = IntSize(image.width, image.height),
+    private var srcSize: IntSize = IntSize(image.width, image.height),
 ) : Painter() {
+
+    var image: ImageBitmap = image
+        set(value) {
+            srcSize = IntSize(value.width, value.height)
+            field = value
+        }
 
     private val size: IntSize = validateSize(srcOffset, srcSize)
 
@@ -42,4 +48,5 @@ class ImagePainter (
         )
         return srcSize
     }
+
 }

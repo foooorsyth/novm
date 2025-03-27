@@ -4,16 +4,18 @@ import Novmpub_gradle.Publishing
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.compose.compiler)
     id("novmpub")
     id("com.vanniktech.maven.publish") version "0.31.0-rc2"
 }
 
 android {
-    namespace = "com.forsyth.novm.runtime"
+    namespace = "com.forsyth.novm.compose"
     compileSdk = 35
 
     defaultConfig {
         minSdk = 16
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
     }
@@ -34,6 +36,9 @@ android {
     kotlinOptions {
         jvmTarget = "11"
     }
+    buildFeatures {
+        compose = true
+    }
 }
 
 group = Publishing.GROUP
@@ -44,11 +49,11 @@ mavenPublishing {
     signAllPublications()
     coordinates(
         groupId = Publishing.GROUP,
-        artifactId = Publishing.ARTIFACT_ID_RUNTIME,
+        artifactId = Publishing.ARTIFACT_ID_COMPOSE,
         version = if (System.getenv("SNAPSHOT") == "SNAPSHOT") Publishing.VERSION + "-SNAPSHOT" else Publishing.VERSION
     )
     pom {
-        name.set(Publishing.PROJ_NAME_RUNTIME)
+        name.set(Publishing.PROJ_NAME_COMPOSE)
         description.set(Publishing.PROJ_DESC)
         inceptionYear.set(Publishing.PROJ_INCEPTION_YEAR)
         url.set(Publishing.GITHUB_URL)
@@ -75,7 +80,16 @@ mavenPublishing {
 }
 
 dependencies {
-    api(project(":novm-core"))
+    implementation(project(":novm-core"))
+    // region COMPOSE
+    // TODO just use foundation compose deps
+    val composeBom = platform("androidx.compose:compose-bom:2025.02.00")
+    implementation(composeBom)
+    androidTestImplementation(composeBom)
+    //implementation(libs.material) // TODO investigate
+    implementation(libs.androidx.activity.compose.v1100)
+    // endregion COMPOSE
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     testImplementation(libs.junit)

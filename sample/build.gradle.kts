@@ -47,24 +47,25 @@ android {
 
 dependencies {
     implementation(project(":novm-runtime"))
+    implementation(project(":novm-compose"))
     implementation(project(":sample-lib"))
     implementation(project(":sample-lib-another"))
+    ksp(project(":novm-compiler"))
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.material3)
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.test.manifest)
-    ksp(project(":novm-compiler"))
 
     // region COMPOSE
     val composeBom = platform("androidx.compose:compose-bom:2025.02.00")
     implementation(composeBom)
     androidTestImplementation(composeBom)
-    implementation("androidx.compose.material:material")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    debugImplementation("androidx.compose.ui:ui-tooling")
-    implementation("androidx.activity:activity-compose:1.10.0")
+    implementation(libs.androidx.ui)
+    implementation(libs.androidx.ui.graphics)
+    implementation(libs.androidx.material3)
+    implementation(libs.androidx.material)
+    implementation(libs.ui.tooling.preview)
+    debugImplementation(libs.ui.tooling)
+    implementation(libs.androidx.activity.compose.v1100)
     // endregion COMPOSE
 
     implementation(libs.androidx.fragment.ktx)

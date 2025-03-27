@@ -1,10 +1,12 @@
 package com.forsyth.novm
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,7 +16,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.res.imageResource
 import com.forsyth.novm.ui.theme.BlueM
@@ -44,6 +50,9 @@ class ComposeActivity : StateSavingActivity() {
                             .fillMaxSize()
                             .padding(innerPadding)
                     ){
+                        var lhs = remember { mutableIntStateOf(1) }
+                        var rhs = rememberSaveable { mutableIntStateOf(1) }
+                        var result = rememberSaveable { mutableIntStateOf(0) }
                         Row(Modifier
                             .weight(1f)
                             .fillMaxWidth()
@@ -63,14 +72,26 @@ class ComposeActivity : StateSavingActivity() {
                                 .weight(1f)
                                 .background(BlueM)
                                 .fillMaxHeight()
+                                .clickable {
+                                    lhs.intValue += 1
+                                    result.intValue = lhs.intValue + rhs.intValue
+                                    Log.d("ComposeActivity", "lhs: ${lhs.intValue}")
+                                },
                             ) {
+                                Text(lhs.intValue.toString())
                                 Spacer(Modifier)
                             }
                             Column(Modifier
                                 .weight(1f)
                                 .background(PurpleM)
                                 .fillMaxHeight()
+                                .clickable {
+                                    rhs.intValue += 1
+                                    result.intValue = lhs.intValue + rhs.intValue
+                                    Log.d("ComposeActivity", "rhs: ${rhs.intValue}")
+                                }
                             ) {
+                                Text(rhs.intValue.toString(), color = Color.White)
                                 Spacer(Modifier)
                             }
                             Column(Modifier
@@ -78,6 +99,7 @@ class ComposeActivity : StateSavingActivity() {
                                 .background(RedM)
                                 .fillMaxHeight()
                             ) {
+                                Text(result.intValue.toString())
                                 Spacer(Modifier)
                             }
                         }

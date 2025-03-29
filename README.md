@@ -67,6 +67,10 @@ Fragments are identified after recreation based on their ```identificationStrate
 
 **FragmentIdentificationStrategy.CLASS**: Fragments are identified by their class
 
+### Compose support
+
+:construction: Soon... :construction:
+
 ### Multi-module Support
 
 novm supports apps with multiple modules. Library modules must declare themselves as dependencies in their build.gradle.kts file:

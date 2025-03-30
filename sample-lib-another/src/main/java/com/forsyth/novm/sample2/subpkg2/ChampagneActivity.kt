@@ -5,6 +5,6 @@ import com.forsyth.novm.Retain
 import com.forsyth.novm.StateDestroyingEvent
 
 class ChampagneActivity : AppCompatActivity() {
-    @Retain(across = [StateDestroyingEvent.CONFIGURATION_CHANGE])
+    @Retain(StateDestroyingEvent.CONFIGURATION_CHANGE)
     var sip = true
 }

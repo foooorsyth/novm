@@ -10,7 +10,7 @@ import androidx.core.content.ContextCompat
 
 class ColorFragment : StateSavingFragment() {
 
-    @Retain(across = [StateDestroyingEvent.CONFIGURATION_CHANGE])
+    @Retain(across = StateDestroyingEvent.CONFIGURATION_CHANGE)
     var colorResInt: Int = 0
 
     override var identificationStrategy: FragmentIdentificationStrategy = FragmentIdentificationStrategy.TAG

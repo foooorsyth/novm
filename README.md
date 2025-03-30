@@ -23,12 +23,12 @@ import com.forsyth.novm.StateSavingActivity
 class MainActivity : StateSavingActivity() {
     // largeImage will survive configuration change
     // see: https://developer.android.com/guide/topics/resources/runtime-changes
-    @Retain(across = [StateDestroyingEvent.CONFIGURATION_CHANGE])
+    @Retain(across = StateDestroyingEvent.CONFIGURATION_CHANGE)
     lateinit var largeImage: Bitmap 
 
     // computedHash will survive system-initiated process death
     // see: https://developer.android.com/guide/components/activities/activity-lifecycle#asem
-    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    @Retain(across = StateDestroyingEvent.PROCESS_DEATH)
     lateinit var computedHash: String
     // ...
 }
@@ -47,10 +47,10 @@ import com.forsyth.novm.Retain
 import com.forsyth.novm.StateDestroyingEvent
 import com.forsyth.novm.StateSavingFragment
 class SomeFragment : StateSavingFragment() {
-    @Retain(across = [StateDestroyingEvent.CONFIGURATION_CHANGE])
+    @Retain(across = StateDestroyingEvent.CONFIGURATION_CHANGE)
     lateinit var largeImage: Bitmap
 
-    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    @Retain(across = StateDestroyingEvent.PROCESS_DEATH)
     lateinit var computedHash: String
 
     // Optional override, see below

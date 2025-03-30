@@ -21,10 +21,10 @@ class ViewsActivity : StateSavingActivity() {
     companion object {
         private const val TAG = "MainActivity"
     }
-    @Retain(across = [CONFIGURATION_CHANGE])
+    @Retain(across = CONFIGURATION_CHANGE)
     lateinit var largeImage: Bitmap
 
-    @Retain(across = [PROCESS_DEATH])
+    @Retain(across = PROCESS_DEATH)
     lateinit var computedHash: String
 
     override fun onCreate(savedInstanceState: Bundle?) {

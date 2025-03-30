@@ -441,7 +441,7 @@ class NoVMProcessor(
             activityToStateEntry.value
                 .filter { ksPropertyDeclaration ->
                     ksPropertyDeclaration.getAnnotationsByType(Retain::class).toList()
-                        .first().across.contains(StateDestroyingEvent.PROCESS_DEATH)
+                        .first().across == StateDestroyingEvent.PROCESS_DEATH
                 }
                 .forEach filteredForEach@{ ksPropertyDeclaration ->
                     val bundleFunPostfixRet = getBundleFunPostfix(resolver, ksPropertyDeclaration, logger, isDebugLoggingEnabled)
@@ -481,7 +481,7 @@ class NoVMProcessor(
             fragmentToStateEntry.value
                 .filter { ksPropertyDeclaration ->
                     ksPropertyDeclaration.getAnnotationsByType(Retain::class).toList()
-                        .first().across.contains(StateDestroyingEvent.PROCESS_DEATH)
+                        .first().across == StateDestroyingEvent.PROCESS_DEATH
                 }
                 .forEach filteredForEach@{ ksPropertyDeclaration ->
                     val bundleFunPostfixRet = getBundleFunPostfix(resolver, ksPropertyDeclaration, logger, isDebugLoggingEnabled)
@@ -593,7 +593,7 @@ class NoVMProcessor(
             activityToStateEntry.value
                 .filter { ksPropertyDeclaration ->
                     ksPropertyDeclaration.getAnnotationsByType(Retain::class).toList()
-                        .first().across.contains(StateDestroyingEvent.PROCESS_DEATH)
+                        .first().across == StateDestroyingEvent.PROCESS_DEATH
                 }
                 .forEach filteredForEach@{ ksPropertyDeclaration ->
                     val resolvedType = ksPropertyDeclaration.type.resolve()
@@ -682,7 +682,7 @@ class NoVMProcessor(
             fragmentToStateEntry.value
                 .filter { ksPropertyDeclaration ->
                     ksPropertyDeclaration.getAnnotationsByType(Retain::class).toList()
-                        .first().across.contains(StateDestroyingEvent.PROCESS_DEATH)
+                        .first().across == StateDestroyingEvent.PROCESS_DEATH
                 }
                 .forEach filteredForEach@{ ksPropertyDeclaration ->
                     val resolvedType = ksPropertyDeclaration.type.resolve()
@@ -827,7 +827,7 @@ class NoVMProcessor(
             funBuilder.beginControlFlow("if (stateHolder.$activityStateHolderFieldName != null) {")
             activityToStateEntry.value.filter { ksPropertyDeclaration ->
                 ksPropertyDeclaration.getAnnotationsByType(Retain::class).toList()
-                    .first().across.contains(StateDestroyingEvent.CONFIGURATION_CHANGE)
+                    .first().across == StateDestroyingEvent.CONFIGURATION_CHANGE
             }
                 .forEach { ksPropertyDeclaration ->
                     // need to find equivalent field in state holder for this activity
@@ -853,7 +853,7 @@ class NoVMProcessor(
             val classDeclOfFrag = resolver.getClassDeclarationByName(fragmentToStateEntry.key)!!
             val configChangeProps = fragmentToStateEntry.value.filter { ksPropertyDeclaration ->
                 ksPropertyDeclaration.getAnnotationsByType(Retain::class).toList()
-                    .first().across.contains(StateDestroyingEvent.CONFIGURATION_CHANGE)
+                    .first().across == StateDestroyingEvent.CONFIGURATION_CHANGE
             }
             funBuilder.beginControlFlow("is ${fragmentToStateEntry.key} -> {")
             funBuilder.beginControlFlow("val fragStateHolder = when(component.identificationStrategy) {")
@@ -985,7 +985,7 @@ class NoVMProcessor(
             )
             activityToStateEntry.value.filter { ksPropertyDeclaration ->
                 ksPropertyDeclaration.getAnnotationsByType(Retain::class).toList()
-                    .first().across.contains(StateDestroyingEvent.CONFIGURATION_CHANGE)
+                    .first().across == StateDestroyingEvent.CONFIGURATION_CHANGE
             }
                 .forEach { ksPropertyDeclaration ->
                     if (ksPropertyDeclaration.modifiers.contains(Modifier.LATEINIT)) {
@@ -1020,7 +1020,7 @@ class NoVMProcessor(
             val fragmentStateHolderTypeSpec = stateHoldersForComponents[fragmentToStateEntry.key]!!
             val configChangeProps = fragmentToStateEntry.value.filter { ksPropertyDeclaration ->
                 ksPropertyDeclaration.getAnnotationsByType(Retain::class).toList()
-                    .first().across.contains(StateDestroyingEvent.CONFIGURATION_CHANGE)
+                    .first().across == StateDestroyingEvent.CONFIGURATION_CHANGE
             }
             funBuilder.beginControlFlow("is ${fragmentToStateEntry.key} -> {")
             funBuilder.beginControlFlow("when(component.identificationStrategy) {")
@@ -1224,7 +1224,7 @@ class NoVMProcessor(
             entry.value.forEach { propDecl ->
                 val retainAnn = propDecl.getAnnotationsByType(Retain::class).toList().first()
                 // only put into the state holder if we're retaining across config change
-                if (retainAnn.across.contains(StateDestroyingEvent.CONFIGURATION_CHANGE)) {
+                if (retainAnn.across == StateDestroyingEvent.CONFIGURATION_CHANGE) {
                     val resolvedType = propDecl.type.resolve()
                     // TODO consider NOT doing this at all
                     // using a default value is probably not needed / dumb

@@ -5,11 +5,14 @@ import androidx.`annotation`.CallSuper
 import androidx.fragment.app.Fragment
 
 
-open class StateSavingFragment : Fragment() {
+open class StateSavingFragment : Fragment(), NonConfigStateRegistryOwner{
   val stateSaver: StateSaver = provideStateSaver()
 
   open var identificationStrategy: FragmentIdentificationStrategy =
       FragmentIdentificationStrategy.TAG
+
+  override val nonConfigStateRegistry: NonConfigStateRegistry
+    get() = TODO("Not yet implemented")
 
   @CallSuper
   override fun onCreate(savedInstanceState: Bundle?) {

@@ -9,13 +9,15 @@ import androidx.lifecycle.LifecycleOwner
 import kotlin.Any
 import kotlin.Suppress
 
-open class StateSavingActivity : AppCompatActivity() {
+open class StateSavingActivity : AppCompatActivity(), NonConfigStateRegistryOwner {
     companion object {
         private const val TAG = "StateSavingActivity"
     }
 
     val stateSaver: StateSaver = provideStateSaver()
-    private var jitStateHolder: StateHolder? = null
+    private var stateHolder: StateHolder? = null
+    override val nonConfigStateRegistry: NonConfigStateRegistry
+        get() = TODO("Not yet implemented")
 
     private val fragmentAttachListener = FragmentOnAttachListener { fragmentManager, fragment ->
         fragment.lifecycle.addObserver(fragmentLifecycleObserver)
@@ -31,9 +33,9 @@ open class StateSavingActivity : AppCompatActivity() {
 
         override fun onDestroy(owner: LifecycleOwner) {
             if (this@StateSavingActivity.isChangingConfigurations) {
-                val sh = stateSaver.saveStateConfigChange(owner, jitStateHolder)
-                if (jitStateHolder == null) {
-                    jitStateHolder = sh
+                val sh = stateSaver.saveStateConfigChange(owner, stateHolder)
+                if (stateHolder == null) {
+                    stateHolder = sh
                 }
             }
         }
@@ -64,10 +66,10 @@ open class StateSavingActivity : AppCompatActivity() {
     @CallSuper
     @Suppress("OVERRIDE_DEPRECATION")
     override fun onRetainCustomNonConfigurationInstance(): Any? {
-        val sh = stateSaver.saveStateConfigChange(this, jitStateHolder)
-        if (jitStateHolder == null) {
-            jitStateHolder = sh
+        val sh = stateSaver.saveStateConfigChange(this, stateHolder)
+        if (stateHolder == null) {
+            stateHolder = sh
         }
-        return jitStateHolder
+        return stateHolder
     }
 }

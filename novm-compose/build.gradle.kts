@@ -81,6 +81,7 @@ mavenPublishing {
 
 dependencies {
     implementation(project(":novm-core"))
+    implementation(project(":novm-runtime"))
     // region COMPOSE
     // TODO just use foundation compose deps
     val composeBom = platform("androidx.compose:compose-bom:2025.02.00")

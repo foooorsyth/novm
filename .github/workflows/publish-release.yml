@@ -27,8 +27,3 @@ jobs:
         ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.ORG_GRADLE_PROJECT_SIGNINGINMEMORYKEY }}
         ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.ORG_GRADLE_PROJECT_SIGNINGINMEMORYKEYPASSWORD }}
       run: ./gradlew publishAndReleaseToMavenCentral --no-configuration-cache
-    - name: Purge Camo
-      continue-on-error: true
-      env:
-        NOVM_GH_BADGE_URL: ${{ vars.NOVM_GH_BADGE_URL }}
-      run: echo "purging $NOVM_GH_BADGE_URL" && ./purge_gh_badge.sh

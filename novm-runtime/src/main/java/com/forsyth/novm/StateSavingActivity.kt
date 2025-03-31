@@ -16,8 +16,12 @@ open class StateSavingActivity : AppCompatActivity(), NonConfigStateRegistryOwne
 
     val stateSaver: StateSaver = provideStateSaver()
     private var stateHolder: StateHolder? = null
+    @Suppress("LeakingThis")
+    // TODO investigate https://stackoverflow.com/a/23069096
+    // ComponentActivity does this without linter whining
+    private var nonConfigRegistryController = NonConfigStateRegistryController.create(this)
     override val nonConfigStateRegistry: NonConfigStateRegistry
-        get() = TODO("Not yet implemented")
+        get() = NonConfigStateRegistry()
 
     private val fragmentAttachListener = FragmentOnAttachListener { fragmentManager, fragment ->
         fragment.lifecycle.addObserver(fragmentLifecycleObserver)
@@ -41,6 +45,10 @@ open class StateSavingActivity : AppCompatActivity(), NonConfigStateRegistryOwne
         }
     }
 
+    init {
+        nonConfigRegistryController.performAttach()
+    }
+
     @CallSuper
     override fun onCreate(savedInstanceState: Bundle?) {
         // NOTE: this listener MUST be setup before super.onCreate is called
@@ -51,6 +59,9 @@ open class StateSavingActivity : AppCompatActivity(), NonConfigStateRegistryOwne
         @Suppress("DEPRECATION")
         (lastCustomNonConfigurationInstance as? StateHolder)?.let { retainedState ->
             stateSaver.restoreStateConfigChange(this, retainedState)
+            // TODO perform restore for compose
+            // TODO need map<String, Any?> field in StateHolder/GeneratedStateHolder
+            //nonConfigRegistryController.performRestore(retainedState.nonConfigState)
         }
         if (savedInstanceState != null) {
             stateSaver.restoreStateBundle(this, savedInstanceState)
@@ -67,6 +78,9 @@ open class StateSavingActivity : AppCompatActivity(), NonConfigStateRegistryOwne
     @Suppress("OVERRIDE_DEPRECATION")
     override fun onRetainCustomNonConfigurationInstance(): Any? {
         val sh = stateSaver.saveStateConfigChange(this, stateHolder)
+        // TODO perform save for compose
+        // TODO need map<String, Any?> field in StateHolder/GeneratedStateHolder
+        //nonConfigRegistryController.performSave(sh.nonConfigState)
         if (stateHolder == null) {
             stateHolder = sh
         }

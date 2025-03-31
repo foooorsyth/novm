@@ -88,13 +88,9 @@ class NonConfigStateRegistry {
         recreatorProvider?.add(clazz.name)
     }
 
-    /**
-     * An interface for an owner of this [SavedStateRegistry] to attach this
-     * to a [Lifecycle].
-     */
     @MainThread
     internal fun performAttach(lifecycle: Lifecycle) {
-        check(!attached) { "SavedStateRegistry was already attached." }
+        check(!attached) { "NonConfigStateRegistry was already attached." }
 
         lifecycle.addObserver(LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_START) {
@@ -107,7 +103,7 @@ class NonConfigStateRegistry {
     }
 
     @MainThread
-    internal fun performRestore(savedState: MutableMap<String, MutableMap<String, Any?>?>?) {
+    internal fun performRestore(nonConfigState: MutableMap<String, MutableMap<String, Any?>?>?) {
         check(attached) {
             ("You must call performAttach() before calling " +
                     "performRestore")
@@ -118,7 +114,7 @@ class NonConfigStateRegistry {
         // passes in the savedInstanceStateBundle, which has other stuff in it
         /// so, the caller of THIS function should just pass in an empty, newly constructed map
         // and we should be okay with this assignment
-        restoredState = savedState
+        restoredState = nonConfigState
         isRestored = true
     }
 

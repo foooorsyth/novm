@@ -17,6 +17,8 @@ import androidx.savedstate.findViewTreeSavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.forsyth.novm.StateDestroyingEvent
 import com.forsyth.novm.StateSavingActivity
+import com.forsyth.novm.findViewTreeNonConfigStateRegistryOwner
+import com.forsyth.novm.setViewTreeNonConfigStateRegistryOwner
 
 
 public fun StateSavingActivity.setContent(
@@ -56,8 +58,9 @@ private fun StateSavingActivity.setOwners() {
     if (decorView.findViewTreeSavedStateRegistryOwner() == null) {
         decorView.setViewTreeSavedStateRegistryOwner(this)
     }
-    // TODO findViewTreeNonConfigStateRegistryOwner
-    // TODO setViewTreeNonConfigStateRegistryOwner
+    if (decorView.findViewTreeNonConfigStateRegistryOwner() == null) {
+        decorView.setViewTreeNonConfigStateRegistryOwner(this)
+    }
 }
 
 private val DefaultActivityContentLayoutParams =

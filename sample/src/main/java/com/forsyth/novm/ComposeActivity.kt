@@ -2,7 +2,6 @@ package com.forsyth.novm
 
 import android.os.Bundle
 import android.util.Log
-import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -27,6 +26,7 @@ import com.forsyth.novm.ui.theme.BlueM
 import com.forsyth.novm.ui.theme.NoVMTheme
 import com.forsyth.novm.ui.theme.PurpleM
 import com.forsyth.novm.ui.theme.RedM
+import com.forsyth.novm.compose.setContent
 
 class ComposeActivity : StateSavingActivity() {
     @Retain(across = [StateDestroyingEvent.CONFIGURATION_CHANGE])

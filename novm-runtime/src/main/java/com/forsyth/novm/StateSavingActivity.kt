@@ -59,9 +59,7 @@ open class StateSavingActivity : AppCompatActivity(), NonConfigStateRegistryOwne
         @Suppress("DEPRECATION")
         (lastCustomNonConfigurationInstance as? StateHolder)?.let { retainedState ->
             stateSaver.restoreStateConfigChange(this, retainedState)
-            // TODO perform restore for compose
-            // TODO need map<String, Any?> field in StateHolder/GeneratedStateHolder
-            //nonConfigRegistryController.performRestore(retainedState.nonConfigState)
+            nonConfigRegistryController.performRestore(retainedState.nonConfigState)
         }
         if (savedInstanceState != null) {
             stateSaver.restoreStateBundle(this, savedInstanceState)
@@ -78,10 +76,11 @@ open class StateSavingActivity : AppCompatActivity(), NonConfigStateRegistryOwne
     @Suppress("OVERRIDE_DEPRECATION")
     override fun onRetainCustomNonConfigurationInstance(): Any? {
         val sh = stateSaver.saveStateConfigChange(this, stateHolder)
-        // TODO perform save for compose
-        // TODO need map<String, Any?> field in StateHolder/GeneratedStateHolder
-        //nonConfigRegistryController.performSave(sh.nonConfigState)
-        if (stateHolder == null) {
+        if (sh.nonConfigState == null) {
+            sh.nonConfigState = mutableMapOf()
+        }
+        nonConfigRegistryController.performSave(sh.nonConfigState!!)
+        if (stateHolder == null) { // possible? not unless there's a race
             stateHolder = sh
         }
         return stateHolder

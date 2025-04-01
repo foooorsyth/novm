@@ -17,6 +17,7 @@ import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSNode
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import com.google.devtools.ksp.symbol.Modifier
+import com.squareup.kotlinpoet.ANY
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
@@ -231,13 +232,6 @@ class NoVMProcessor(
             .build()
             .writeTo(codeGenerator, Dependencies(aggregating = true, *componentContainingFiles.toTypedArray()))
         return emptyList()
-    }
-
-    private fun generateRandomAlphanumeric(length: Int = 6): String {
-        val charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-        return (1..length)
-            .map { charset[Random.nextInt(charset.length)] }
-            .joinToString("")
     }
 
     private fun ensureSupported(
@@ -1139,6 +1133,26 @@ class NoVMProcessor(
     ): TypeSpec {
         val builder = TypeSpec.classBuilder("GeneratedStateHolder")
             .addSuperinterface(ClassName(DEFAULT_PACKAGE_NAME, "StateHolder"))
+        builder.addProperty(
+            PropertySpec.builder(
+                "nonConfigState",
+                MUTABLE_MAP
+                    .parameterizedBy(
+                        STRING,
+                        MUTABLE_MAP
+                            .parameterizedBy(
+                                STRING,
+                                ANY.copy(nullable = true)
+                            )
+                            .copy(nullable = true)
+                    )
+                    .copy(nullable = true)
+            )
+                .mutable(true)
+                .addModifiers(KModifier.OVERRIDE)
+                .initializer("%L", "null")
+                .build()
+        )
         componentToStateMap.forEach { componentEntry ->
             val stateHolderEntry =
                 stateHoldersForComponents[componentEntry.key]!!
@@ -1183,7 +1197,7 @@ class NoVMProcessor(
                         mutableMapIntToHolder
                     )
                         .mutable(true)
-                        .initializer("%L", "mutableMapOf()")
+                        .initializer("%L", "mutableMapOf() // TODO make these nullable") // TODO make these nullable
                         .build()
                 )
                 builder.addProperty(
@@ -1192,7 +1206,7 @@ class NoVMProcessor(
                         mutableMapStringToHolder
                     )
                         .mutable(true)
-                        .initializer("%L", "mutableMapOf()")
+                        .initializer("%L", "mutableMapOf() // TODO make these nullable") // TODO make these nullable
                         .build()
                 )
             }

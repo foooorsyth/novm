@@ -16,12 +16,11 @@ open class StateSavingActivity : AppCompatActivity(), NonConfigStateRegistryOwne
 
     val stateSaver: StateSaver = provideStateSaver()
     private var stateHolder: StateHolder? = null
-    @Suppress("LeakingThis")
-    // TODO investigate https://stackoverflow.com/a/23069096
-    // ComponentActivity does this without linter whining
-    private var nonConfigRegistryController = NonConfigStateRegistryController.create(this)
+    private val _nonConfigStateRegistry = NonConfigStateRegistry()
     override val nonConfigStateRegistry: NonConfigStateRegistry
-        get() = NonConfigStateRegistry()
+        get() = _nonConfigStateRegistry
+    @Suppress("LeakingThis")
+    private val nonConfigRegistryController = NonConfigStateRegistryController.create(this)
 
     private val fragmentAttachListener = FragmentOnAttachListener { fragmentManager, fragment ->
         fragment.lifecycle.addObserver(fragmentLifecycleObserver)
@@ -48,22 +47,24 @@ open class StateSavingActivity : AppCompatActivity(), NonConfigStateRegistryOwne
     init {
         nonConfigRegistryController.performAttach()
     }
-
     @CallSuper
     override fun onCreate(savedInstanceState: Bundle?) {
         // NOTE: this listener MUST be setup before super.onCreate is called
         // otherwise, after configuration change, fragments will re-attach
         // BEFORE onAttachListener is added, making the listener useless
         supportFragmentManager.addFragmentOnAttachListener(fragmentAttachListener)
-        super.onCreate(savedInstanceState)
         @Suppress("DEPRECATION")
-        (lastCustomNonConfigurationInstance as? StateHolder)?.let { retainedState ->
+        val retainedState = lastCustomNonConfigurationInstance as? StateHolder
+        if (retainedState != null) {
             stateSaver.restoreStateConfigChange(this, retainedState)
-            nonConfigRegistryController.performRestore(retainedState.nonConfigState)
         }
+        // performRestore MUST be called before onCreate, even if retainedState is null
+        // registry is stateful, needs 'isRestored' to be true
+        nonConfigRegistryController.performRestore(retainedState?.nonConfigState)
         if (savedInstanceState != null) {
             stateSaver.restoreStateBundle(this, savedInstanceState)
         }
+        super.onCreate(savedInstanceState)
     }
 
     @CallSuper

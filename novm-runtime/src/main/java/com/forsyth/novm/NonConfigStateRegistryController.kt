@@ -8,8 +8,6 @@ import androidx.lifecycle.Lifecycle
  */
 class NonConfigStateRegistryController private constructor(private val owner: NonConfigStateRegistryOwner) {
 
-    val nonConfigStateRegistry: NonConfigStateRegistry = NonConfigStateRegistry()
-
     private var attached = false
 
     @MainThread
@@ -19,7 +17,7 @@ class NonConfigStateRegistryController private constructor(private val owner: No
             ("Restarter must be created only during owner's initialization stage")
         }
         lifecycle.addObserver(NonConfigRecreator(owner))
-        nonConfigStateRegistry.performAttach(lifecycle)
+        owner.nonConfigStateRegistry.performAttach(lifecycle)
         attached = true
     }
 
@@ -32,12 +30,12 @@ class NonConfigStateRegistryController private constructor(private val owner: No
         check(!lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
             ("performRestore cannot be called when owner is ${lifecycle.currentState}")
         }
-        nonConfigStateRegistry.performRestore(nonConfigState)
+        owner.nonConfigStateRegistry.performRestore(nonConfigState)
     }
 
     @MainThread
     fun performSave(outState: MutableMap<String, MutableMap<String, Any?>?>) {
-        nonConfigStateRegistry.performSave(outState)
+        owner.nonConfigStateRegistry.performSave(outState)
     }
 
     companion object {

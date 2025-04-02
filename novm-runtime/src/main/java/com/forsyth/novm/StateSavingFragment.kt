@@ -5,7 +5,7 @@ import androidx.`annotation`.CallSuper
 import androidx.fragment.app.Fragment
 
 
-open class StateSavingFragment : Fragment(), NonConfigStateRegistryOwner{
+open class StateSavingFragment : Fragment(), NonConfigStateRegistryOwner {
   val stateSaver: StateSaver = provideStateSaver()
 
   open var identificationStrategy: FragmentIdentificationStrategy =

@@ -5,7 +5,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 
 /**
- * Mirrors androidx.savedstate.Recreator (internal) but for non config state
+ * Mirrors [androidx.savedstate.Recreator] (internal) but for non config state
  */
 internal class NonConfigRecreator(
     private val owner: NonConfigStateRegistryOwner

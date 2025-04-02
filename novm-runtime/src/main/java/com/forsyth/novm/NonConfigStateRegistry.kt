@@ -24,14 +24,9 @@ class NonConfigStateRegistry {
 
     @MainThread
     fun consumeRestoredStateForKey(key: String): MutableMap<String, Any?>? {
-        /*check(isRestored) {
+        check(isRestored) {
             ("You can consumeRestoredStateForKey " +
                     "only after super.onCreate of corresponding component")
-        }
-        */
-        // TODO MUST FIX ASAP
-        if (!isRestored) {
-            return null
         }
         if (restoredState != null) {
             val result = restoredState!![key]
@@ -119,6 +114,8 @@ class NonConfigStateRegistry {
         // passes in the savedInstanceStateBundle, which has other stuff in it
         /// so, the caller of THIS function should just pass in an empty, newly constructed map
         // and we should be okay with this assignment
+        // TODO reinvestigate if this^ is actually true
+        // TODO check SavedStateRegistry#
         restoredState = nonConfigState
         isRestored = true
     }

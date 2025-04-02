@@ -77,6 +77,6 @@ internal class NonConfigRecreator(
 
     companion object {
         const val CLASSES_KEY = "classes_to_restore"
-        const val COMPONENT_KEY = "androidx.savedstate.Restarter"
+        const val COMPONENT_KEY = "com.forsyth.novm.NonConfigRestarter"
     }
 }

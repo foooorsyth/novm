@@ -27,6 +27,11 @@ import com.forsyth.novm.ui.theme.NoVMTheme
 import com.forsyth.novm.ui.theme.PurpleM
 import com.forsyth.novm.ui.theme.RedM
 import com.forsyth.novm.compose.setContent
+//import androidx.activity.compose.setContent
+import androidx.compose.runtime.CompositionLocalProvider
+import com.forsyth.novm.compose.ComposeNonConfigStateRegistryImpl
+import com.forsyth.novm.compose.LocalNonConfigStateRegistry
+import com.forsyth.novm.compose.retain
 
 class ComposeActivity : StateSavingActivity() {
     @Retain(across = [StateDestroyingEvent.CONFIGURATION_CHANGE])
@@ -53,6 +58,7 @@ class ComposeActivity : StateSavingActivity() {
                         var lhs = remember { mutableIntStateOf(1) }
                         var rhs = rememberSaveable { mutableIntStateOf(1) }
                         var result = rememberSaveable { mutableIntStateOf(0) }
+                        var test = retain { }
                         Row(Modifier
                             .weight(1f)
                             .fillMaxWidth()

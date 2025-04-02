@@ -24,9 +24,14 @@ class NonConfigStateRegistry {
 
     @MainThread
     fun consumeRestoredStateForKey(key: String): MutableMap<String, Any?>? {
-        check(isRestored) {
+        /*check(isRestored) {
             ("You can consumeRestoredStateForKey " +
                     "only after super.onCreate of corresponding component")
+        }
+        */
+        // TODO MUST FIX ASAP
+        if (!isRestored) {
+            return null
         }
         if (restoredState != null) {
             val result = restoredState!![key]

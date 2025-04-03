@@ -69,7 +69,10 @@ Fragments are identified after recreation based on their ```identificationStrate
 
 ### Compose support
 
-:construction: Soon... :construction:
+[MutableState](https://developer.android.com/reference/kotlin/androidx/compose/runtime/MutableState) can be declared in your 
+component scope (Activities & Fragments), annotated with ```@Retain```, and passed into your Compose composition.
+
+novm support for state declaration *inside* of the Compose composition is :construction: under construction :construction: and coming soon. See ```:novm-compose```
 
 ### Multi-module Support
 

@@ -28,9 +28,6 @@ import com.forsyth.novm.ui.theme.PurpleM
 import com.forsyth.novm.ui.theme.RedM
 import com.forsyth.novm.compose.setContent
 //import androidx.activity.compose.setContent
-import androidx.compose.runtime.CompositionLocalProvider
-import com.forsyth.novm.compose.ComposeNonConfigStateRegistryImpl
-import com.forsyth.novm.compose.LocalNonConfigStateRegistry
 import com.forsyth.novm.compose.retain
 
 class ComposeActivity : StateSavingActivity() {

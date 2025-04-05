@@ -1,9 +1,9 @@
 package com.forsyth.novm
 
 interface StateHolder {
-    var nonConfigState: MutableMap<String, MutableMap<String, Any?>?>?
+    var nonConfigRegistryState: MutableMap<String, Any?>?
 }
 
 class EmptyStateHolder : StateHolder {
-    override var nonConfigState: MutableMap<String, MutableMap<String, Any?>?>? = null
+    override var nonConfigRegistryState: MutableMap<String, Any?>? = null
 }

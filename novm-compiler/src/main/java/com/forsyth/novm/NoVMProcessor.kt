@@ -1135,16 +1135,11 @@ class NoVMProcessor(
             .addSuperinterface(ClassName(DEFAULT_PACKAGE_NAME, "StateHolder"))
         builder.addProperty(
             PropertySpec.builder(
-                "nonConfigState",
+                "nonConfigRegistryState",
                 MUTABLE_MAP
                     .parameterizedBy(
                         STRING,
-                        MUTABLE_MAP
-                            .parameterizedBy(
-                                STRING,
-                                ANY.copy(nullable = true)
-                            )
-                            .copy(nullable = true)
+                        ANY.copy(nullable = true)
                     )
                     .copy(nullable = true)
             )

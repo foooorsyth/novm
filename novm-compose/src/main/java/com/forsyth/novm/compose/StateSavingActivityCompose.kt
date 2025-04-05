@@ -4,6 +4,8 @@ import android.view.ViewGroup
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionContext
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.ComposeView
 import androidx.lifecycle.findViewTreeLifecycleOwner
 import androidx.lifecycle.findViewTreeViewModelStoreOwner
@@ -14,8 +16,6 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.forsyth.novm.StateSavingActivity
 import com.forsyth.novm.findViewTreeNonConfigStateRegistryOwner
 import com.forsyth.novm.setViewTreeNonConfigStateRegistryOwner
-
-
 
 fun StateSavingActivity.setContent(
     parent: CompositionContext? = null,
@@ -28,8 +28,18 @@ fun StateSavingActivity.setContent(
         with(existingComposeView) withScope@ {
             setParentCompositionContext(parent)
             setContent {
+                val nonConfigRegistryOwner = this.findViewTreeNonConfigStateRegistryOwner()!!
+                val nonConfigRegistry = remember {
+                    DisposableNonConfigStateRegistryCompose(existingComposeView, nonConfigRegistryOwner)
+                }
+                DisposableEffect(Unit) {
+                    onDispose {
+                        nonConfigRegistry.dispose()
+                    }
+                }
                 CompositionLocalProvider(
-                   LocalNonConfigStateRegistryOwner provides this.findViewTreeNonConfigStateRegistryOwner()!!
+                    LocalNonConfigStateRegistryOwner provides nonConfigRegistryOwner,
+                    LocalNonConfigStateRegistry provides nonConfigRegistry
                 ) {
                     content()
                 }
@@ -54,6 +64,8 @@ fun StateSavingActivity.setContent(
             setContentView(this, DefaultActivityContentLayoutParams)
         }
 }
+
+
 
 private fun StateSavingActivity.setOwners() {
     val decorView = window.decorView

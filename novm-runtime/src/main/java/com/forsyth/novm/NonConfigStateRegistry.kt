@@ -103,26 +103,24 @@ class NonConfigStateRegistry {
     }
 
     @MainThread
-    internal fun performRestore(nonConfigState: MutableMap<String, MutableMap<String, Any?>?>?) {
+    internal fun performRestore(
+        nonConfigState: MutableMap<String, Any?>?
+    ) {
         check(attached) {
             ("You must call performAttach() before calling " +
                     "performRestore")
         }
         check(!isRestored) { "SavedStateRegistry was already restored." }
-        // TODO good? or putAll?
-        // the only reason SAVED_COMPONENTS_KEY exists is because the bundle impl
-        // passes in the savedInstanceStateBundle, which has other stuff in it
-        /// so, the caller of THIS function should just pass in an empty, newly constructed map
-        // and we should be okay with this assignment
-        // TODO reinvestigate if this^ is actually true
-        // TODO check SavedStateRegistry#
-        restoredState = nonConfigState
+
+        @Suppress("UNCHECKED_CAST")
+        restoredState = nonConfigState?.get(SAVED_COMPONENTS_KEY) as MutableMap<String, MutableMap<String, Any?>?>?
         isRestored = true
     }
 
     @SuppressLint("RestrictedApi")
     @MainThread
-    fun performSave(outState: MutableMap<String, MutableMap<String, Any?>?>) {
+    fun performSave(outState: MutableMap<String, Any?>) {
+        val components = mutableMapOf<String, Any?>()
         if (restoredState != null) {
             outState.putAll(restoredState!!)
         }
@@ -132,11 +130,19 @@ class NonConfigStateRegistry {
             val (key, value) = it.next()
             outState[key] = value.provideState()
         }
+        if (components.isNotEmpty()) {
+            outState[SAVED_COMPONENTS_KEY] = components
+        }
     }
 
     fun interface NonConfigStateProvider {
         // deserved a better name. "saveState" was confusing because the provider
         // is not doing the saving -- it's just providing it to the registry
         fun provideState(): MutableMap<String, Any?>
+    }
+
+    private companion object {
+        private const val SAVED_COMPONENTS_KEY =
+            "com.forsyth.novm.NonConfigStateRegistry.key"
     }
 }

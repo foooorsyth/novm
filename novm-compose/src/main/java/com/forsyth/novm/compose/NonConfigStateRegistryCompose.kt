@@ -253,6 +253,7 @@ private fun canBeSavedAsNonConfig(value: Any): Boolean {
 private fun MutableMap<String, Any?>.toMapWithListOfAnyValues(): Map<String, List<Any?>> {
     val ret = mutableMapOf<String, List<Any?>>()
     this.keys.forEach { key ->
+        @Suppress("UNCHECKED_CAST")
         val list = get(key) as ArrayList<Any?>
         ret[key] = list
     }

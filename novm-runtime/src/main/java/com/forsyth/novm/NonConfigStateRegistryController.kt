@@ -22,7 +22,7 @@ class NonConfigStateRegistryController private constructor(private val owner: No
     }
 
     @MainThread
-    fun performRestore(nonConfigState: MutableMap<String, MutableMap<String, Any?>?>?) {
+    fun performRestore(nonConfigState: MutableMap<String, Any?>?) {
         if (!attached) {
             performAttach()
         }
@@ -34,7 +34,7 @@ class NonConfigStateRegistryController private constructor(private val owner: No
     }
 
     @MainThread
-    fun performSave(outState: MutableMap<String, MutableMap<String, Any?>?>) {
+    fun performSave(outState: MutableMap<String, Any?>) {
         owner.nonConfigStateRegistry.performSave(outState)
     }
 

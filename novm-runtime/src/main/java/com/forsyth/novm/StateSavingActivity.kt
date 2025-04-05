@@ -59,8 +59,8 @@ open class StateSavingActivity : AppCompatActivity(), NonConfigStateRegistryOwne
             stateSaver.restoreStateConfigChange(this, retainedState)
         }
         // performRestore MUST be called before onCreate, even if retainedState is null
-        // registry is stateful, needs 'isRestored' to be true
-        nonConfigRegistryController.performRestore(retainedState?.nonConfigState)
+        // registry is stateful, needs internal 'isRestored' to be true
+        nonConfigRegistryController.performRestore(retainedState?.nonConfigRegistryState)
         if (savedInstanceState != null) {
             stateSaver.restoreStateBundle(this, savedInstanceState)
         }
@@ -77,10 +77,10 @@ open class StateSavingActivity : AppCompatActivity(), NonConfigStateRegistryOwne
     @Suppress("OVERRIDE_DEPRECATION")
     override fun onRetainCustomNonConfigurationInstance(): Any? {
         val sh = stateSaver.saveStateConfigChange(this, stateHolder)
-        if (sh.nonConfigState == null) {
-            sh.nonConfigState = mutableMapOf()
+        if (sh.nonConfigRegistryState == null) {
+            sh.nonConfigRegistryState = mutableMapOf()
         }
-        nonConfigRegistryController.performSave(sh.nonConfigState!!)
+        nonConfigRegistryController.performSave(sh.nonConfigRegistryState!!)
         if (stateHolder == null) { // possible? not unless there's a race
             stateHolder = sh
         }

@@ -69,8 +69,37 @@ Fragments are identified after recreation based on their ```identificationStrate
 
 ### Compose support
 
-[MutableState](https://developer.android.com/reference/kotlin/androidx/compose/runtime/MutableState) can be declared in your 
-component scope (Activities & Fragments), annotated with ```@Retain```, and passed into your Compose composition.
+```kotlin
+import com.forsyth.novm.StateSavingActivity
+import com.forsyth.novm.compose.setContent
+import com.forsyth.novm.compose.retainAcrossRecomposition
+import com.forsyth.novm.compose.retainAcrossConfigChange
+import com.forsyth.novm.compose.retainAcrossProcessDeath
+
+// must extend StateSavingActivity
+class ComposeActivity : StateSavingActivity() { 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // NOTE: new composition entry point! this is not `androidx.activity.compose.setContent`
+        setContent {
+            // survives recomposition - equivalent to `remember`
+            var foo = retainAcrossRecomposition { mutableIntStateOf(1) }
+ 
+            // survives configuration change (can be `Any?`)
+            var bar = retainAcrossConfigChange { mutableIntStateOf(2) }
+
+            // survives process death (must be Bundle type) - equivalent to `rememberSaveable`
+            var baz = retainAcrossProcessDeath { mutableIntStateOf(3) } 
+            // ... 
+        }
+        // ...
+    }
+    // ...
+}
+```
+
+Additionally, [MutableState](https://developer.android.com/reference/kotlin/androidx/compose/runtime/MutableState) 
+can always be declared in your component scope (Activities & Fragments), annotated with ```@Retain```, and passed into your Compose composition.
 
 ### Multi-module Support
 

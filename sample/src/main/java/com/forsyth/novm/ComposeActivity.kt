@@ -53,9 +53,7 @@ class ComposeActivity : StateSavingActivity() {
                     ){
                         var lhs = retainAcrossRecomposition { mutableIntStateOf(1) }
                         var rhs = retainAcrossConfigChange { mutableIntStateOf(1) }
-                        var result = retainAcrossProcessDeath {
-                            mutableIntStateOf(2)
-                        }
+                        var result = retainAcrossProcessDeath { mutableIntStateOf(2) }
                         Row(Modifier
                             .weight(1f)
                             .fillMaxWidth()

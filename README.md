@@ -83,14 +83,12 @@ class ComposeActivity : StateSavingActivity() {
         super.onCreate(savedInstanceState)
         // new entry point! this is not `androidx.activity.compose.setContent`
         setContent {
-            // survives recomposition - equivalent to `remember`
+            // survives recomposition -- equivalent to `remember`
             var foo = retainAcrossRecomposition { mutableIntStateOf(1) }
- 
-            // survives configuration change (can be `Any?`)
-            var bar = retainAcrossConfigChange { mutableIntStateOf(2) }
-
-            // survives process death (must be Bundle type) - equivalent to `rememberSaveable`
-            var baz = retainAcrossProcessDeath { mutableIntStateOf(3) } 
+            // survives config change (can be `Any?`) without a ViewModel
+            var bar = retainAcrossConfigChange { mutableStateOf(NonSerializableClass()) }
+            // survives process death (must be Bundle type) -- equivalent to `rememberSaveable`
+            var baz = retainAcrossProcessDeath { mutableStateOf(SerializableClass()) } 
             // ... 
         }
         // ...

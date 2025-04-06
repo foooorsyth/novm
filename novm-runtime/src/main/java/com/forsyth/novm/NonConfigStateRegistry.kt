@@ -122,13 +122,13 @@ class NonConfigStateRegistry {
     fun performSave(outState: MutableMap<String, Any?>) {
         val components = mutableMapOf<String, Any?>()
         if (restoredState != null) {
-            outState.putAll(restoredState!!)
+            components.putAll(restoredState!!)
         }
         val it: Iterator<Map.Entry<String, NonConfigStateProvider>> =
             this.components.iteratorWithAdditions()
         while (it.hasNext()) {
             val (key, value) = it.next()
-            outState[key] = value.provideState()
+            components[key] = value.provideState()
         }
         if (components.isNotEmpty()) {
             outState[SAVED_COMPONENTS_KEY] = components

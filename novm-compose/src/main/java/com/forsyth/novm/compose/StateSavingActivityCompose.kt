@@ -52,8 +52,18 @@ fun StateSavingActivity.setContent(
             setParentCompositionContext(parent)
             setOwners()
             setContent activityScope@ {
+                val nonConfigRegistryOwner = this.findViewTreeNonConfigStateRegistryOwner()!!
+                val nonConfigRegistry = remember {
+                    DisposableNonConfigStateRegistryCompose(this, nonConfigRegistryOwner)
+                }
+                DisposableEffect(Unit) {
+                    onDispose {
+                        nonConfigRegistry.dispose()
+                    }
+                }
                 CompositionLocalProvider(
-                LocalNonConfigStateRegistryOwner provides this.findViewTreeNonConfigStateRegistryOwner()!!
+                    LocalNonConfigStateRegistryOwner provides nonConfigRegistryOwner,
+                    LocalNonConfigStateRegistry provides nonConfigRegistry
                 ) {
                     content()
                 }

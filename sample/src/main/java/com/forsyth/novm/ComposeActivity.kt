@@ -17,7 +17,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -53,9 +52,10 @@ class ComposeActivity : StateSavingActivity() {
                             .padding(innerPadding)
                     ){
                         var lhs = remember { mutableIntStateOf(1) }
-                        var rhs = rememberSaveable { mutableIntStateOf(1) }
-                        var result = rememberSaveable { mutableIntStateOf(0) }
-                        var test = retain { }
+                        var rhs = retain { mutableIntStateOf(1) }
+                        var result = retain (across = StateDestroyingEvent.PROCESS_DEATH) {
+                            mutableIntStateOf(0)
+                        }
                         Row(Modifier
                             .weight(1f)
                             .fillMaxWidth()

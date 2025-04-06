@@ -72,8 +72,6 @@ Fragments are identified after recreation based on their ```identificationStrate
 [MutableState](https://developer.android.com/reference/kotlin/androidx/compose/runtime/MutableState) can be declared in your 
 component scope (Activities & Fragments), annotated with ```@Retain```, and passed into your Compose composition.
 
-novm support for state declaration *inside* of the Compose composition is :construction: under construction :construction: and coming soon. See ```:novm-compose```
-
 ### Multi-module Support
 
 novm supports apps with multiple modules. Library modules must declare themselves as dependencies in their build.gradle.kts file:

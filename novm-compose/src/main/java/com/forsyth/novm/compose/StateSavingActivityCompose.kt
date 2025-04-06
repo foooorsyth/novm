@@ -25,7 +25,7 @@ fun StateSavingActivity.setContent(
         window.decorView.findViewById<ViewGroup>(android.R.id.content).getChildAt(0) as? ComposeView
 
     if (existingComposeView != null)
-        with(existingComposeView) withScope@ {
+        with(existingComposeView) {
             setParentCompositionContext(parent)
             setContent {
                 val nonConfigRegistryOwner = this.findViewTreeNonConfigStateRegistryOwner()!!
@@ -51,7 +51,7 @@ fun StateSavingActivity.setContent(
             // to have ComposeView create the composition on attach
             setParentCompositionContext(parent)
             setOwners()
-            setContent activityScope@ {
+            setContent {
                 val nonConfigRegistryOwner = this.findViewTreeNonConfigStateRegistryOwner()!!
                 val nonConfigRegistry = remember {
                     DisposableNonConfigStateRegistryCompose(this, nonConfigRegistryOwner)

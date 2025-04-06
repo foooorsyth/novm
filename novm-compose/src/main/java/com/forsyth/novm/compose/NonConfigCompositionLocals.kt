@@ -6,5 +6,5 @@ import com.forsyth.novm.NonConfigStateRegistryOwner
 val LocalNonConfigStateRegistry = staticCompositionLocalOf<NonConfigStateRegistryCompose?> { null }
 
 val LocalNonConfigStateRegistryOwner = staticCompositionLocalOf<NonConfigStateRegistryOwner> {
-    error("CompositionLocal LocalSavedStateRegistryOwner not present")
+    error("CompositionLocal LocalNonConfigStateRegistryOwner not present")
 }

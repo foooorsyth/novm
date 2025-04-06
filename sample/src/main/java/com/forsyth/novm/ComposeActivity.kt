@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -26,8 +25,9 @@ import com.forsyth.novm.ui.theme.NoVMTheme
 import com.forsyth.novm.ui.theme.PurpleM
 import com.forsyth.novm.ui.theme.RedM
 import com.forsyth.novm.compose.setContent
-//import androidx.activity.compose.setContent
-import com.forsyth.novm.compose.retain
+import com.forsyth.novm.compose.retainAcrossConfigChange
+import com.forsyth.novm.compose.retainAcrossProcessDeath
+import com.forsyth.novm.compose.retainAcrossRecomposition
 
 class ComposeActivity : StateSavingActivity() {
     @Retain(across = [StateDestroyingEvent.CONFIGURATION_CHANGE])
@@ -51,10 +51,10 @@ class ComposeActivity : StateSavingActivity() {
                             .fillMaxSize()
                             .padding(innerPadding)
                     ){
-                        var lhs = remember { mutableIntStateOf(1) }
-                        var rhs = retain { mutableIntStateOf(1) }
-                        var result = retain (across = StateDestroyingEvent.PROCESS_DEATH) {
-                            mutableIntStateOf(0)
+                        var lhs = retainAcrossRecomposition { mutableIntStateOf(1) }
+                        var rhs = retainAcrossConfigChange { mutableIntStateOf(1) }
+                        var result = retainAcrossProcessDeath {
+                            mutableIntStateOf(2)
                         }
                         Row(Modifier
                             .weight(1f)

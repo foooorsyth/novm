@@ -29,11 +29,6 @@ import com.forsyth.novm.compose.setContent
 import com.forsyth.novm.compose.retainAcrossConfigChange
 import com.forsyth.novm.compose.retainAcrossProcessDeath
 import com.forsyth.novm.compose.retainAcrossRecomposition
-import java.io.Serializable
-
-class NonSerializableClass()
-
-class SerializableClass() : Serializable
 
 class ComposeActivity : StateSavingActivity() {
     @Retain(across = [StateDestroyingEvent.CONFIGURATION_CHANGE])
@@ -57,16 +52,9 @@ class ComposeActivity : StateSavingActivity() {
                             .fillMaxSize()
                             .padding(innerPadding)
                     ){
-
-                        // survives recomposition -- equivalent to `remember`
-                        var foo = retainAcrossRecomposition { mutableIntStateOf(1) }
-                        // survives config change (can be `Any?`) without a ViewModel
-                        var bar = retainAcrossConfigChange { mutableStateOf(NonSerializableClass()) }
-                        // survives process death (must be Bundle type) -- equivalent to `rememberSaveable`
-                        var baz = retainAcrossProcessDeath { mutableStateOf(SerializableClass()) }
-
-
-
+                        var lhs = retainAcrossRecomposition { mutableIntStateOf(1) }
+                        var rhs = retainAcrossConfigChange { mutableIntStateOf(1) }
+                        var result = retainAcrossProcessDeath { mutableIntStateOf(2) }
                         Row(Modifier
                             .weight(1f)
                             .fillMaxWidth()
@@ -87,12 +75,12 @@ class ComposeActivity : StateSavingActivity() {
                                 .background(BlueM)
                                 .fillMaxHeight()
                                 .clickable {
-                                    lhs.value.intValue += 1
-                                    result.intValue = lhs.value.intValue + rhs.intValue
-                                    Log.d("ComposeActivity", "lhs: ${lhs.value.intValue}")
+                                    lhs.intValue += 1
+                                    result.intValue = lhs.intValue + rhs.intValue
+                                    Log.d("ComposeActivity", "lhs: ${lhs.intValue}")
                                 },
                             ) {
-                                Text(lhs.value.intValue.toString())
+                                Text(lhs.intValue.toString())
                                 Spacer(Modifier)
                             }
                             Column(Modifier
@@ -101,7 +89,7 @@ class ComposeActivity : StateSavingActivity() {
                                 .fillMaxHeight()
                                 .clickable {
                                     rhs.intValue += 1
-                                    result.intValue = lhs.value.intValue + rhs.intValue
+                                    result.intValue = lhs.intValue + rhs.intValue
                                     Log.d("ComposeActivity", "rhs: ${rhs.intValue}")
                                 }
                             ) {

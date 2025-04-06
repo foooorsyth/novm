@@ -1,4 +1,4 @@
-# novm ![build](https://github.com/foooorsyth/novm/actions/workflows/build.yml/badge.svg) ![novm-runtime](https://img.shields.io/maven-central/v/com.forsyth.novm/novm-runtime?versionPrefix=1.0.2&style=flat&label=novm-runtime&color=blue&cacheSeconds=3600&link=https%3A%2F%2Fcentral.sonatype.com%2Fartifact%2Fcom.forsyth.novm%2Fnovm-runtime) ![novm-compiler](https://img.shields.io/maven-central/v/com.forsyth.novm/novm-compiler?versionPrefix=1.0.2&style=flat&label=novm-compiler&color=%236650a4&cacheSeconds=3600&link=https%3A%2F%2Fcentral.sonatype.com%2Fartifact%2Fcom.forsyth.novm%2Fnovm-compiler) [![Follow @foooorsyth](https://img.shields.io/twitter/follow/foooorsyth?style=social)](https://x.com/foooorsyth)
+# novm ![build](https://github.com/foooorsyth/novm/actions/workflows/build.yml/badge.svg) ![novm-runtime](https://img.shields.io/maven-central/v/com.forsyth.novm/novm-runtime?versionPrefix=1.1.0&style=flat&label=novm-runtime&color=blue&cacheSeconds=3600&link=https%3A%2F%2Fcentral.sonatype.com%2Fartifact%2Fcom.forsyth.novm%2Fnovm-runtime) ![novm-compiler](https://img.shields.io/maven-central/v/com.forsyth.novm/novm-compiler?versionPrefix=1.1.0&style=flat&label=novm-compiler&color=%236650a4&cacheSeconds=3600&link=https%3A%2F%2Fcentral.sonatype.com%2Fartifact%2Fcom.forsyth.novm%2Fnovm-compiler) ![novm-compose](https://img.shields.io/maven-central/v/com.forsyth.novm/novm-compose?versionPrefix=1.1.0&style=flat&label=novm-compose&color=%23fcc603&cacheSeconds=3600&link=https%3A%2F%2Fcentral.sonatype.com%2Fartifact%2Fcom.forsyth.novm%2Fnovm-compose) [![Follow @foooorsyth](https://img.shields.io/twitter/follow/foooorsyth?style=social)](https://x.com/foooorsyth)
 
 *ditch your ViewModels*
 
@@ -8,8 +8,9 @@ First, [add the ksp plugin to your project](https://developer.android.com/build/
 Then, add the novm runtime and compiler to your module's build.gradle.kts file:
 ```kotlin
 dependencies {
-    val novm_version = "1.0.2"
+    val novm_version = "1.1.0"
     implementation("com.forsyth.novm:novm-runtime:$novm_version")
+    implementation("com.forsyth.novm:novm-compose:$novm_version") // optional, for compose support
     ksp("com.forsyth.novm:novm-compiler:$novm_version")
 }
 ```
@@ -80,7 +81,7 @@ import com.forsyth.novm.compose.retainAcrossProcessDeath
 class ComposeActivity : StateSavingActivity() { 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // NOTE: new composition entry point! this is not `androidx.activity.compose.setContent`
+        // new entry point! this is not `androidx.activity.compose.setContent`
         setContent {
             // survives recomposition - equivalent to `remember`
             var foo = retainAcrossRecomposition { mutableIntStateOf(1) }

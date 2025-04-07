@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -31,6 +30,11 @@ import com.forsyth.novm.compose.retainAcrossProcessDeath
 import com.forsyth.novm.compose.retainAcrossRecomposition
 
 class ComposeActivity : StateSavingActivity() {
+
+    companion object {
+        val COLORS: Array<Color> = arrayOf( BlueM, PurpleM, RedM )
+    }
+
     @Retain(across = [StateDestroyingEvent.CONFIGURATION_CHANGE])
     lateinit var imagePainter: ImagePainter
 
@@ -52,9 +56,6 @@ class ComposeActivity : StateSavingActivity() {
                             .fillMaxSize()
                             .padding(innerPadding)
                     ){
-                        var lhs = retainAcrossRecomposition { mutableIntStateOf(1) }
-                        var rhs = retainAcrossConfigChange { mutableIntStateOf(1) }
-                        var result = retainAcrossProcessDeath { mutableIntStateOf(2) }
                         Row(Modifier
                             .weight(1f)
                             .fillMaxWidth()
@@ -70,38 +71,40 @@ class ComposeActivity : StateSavingActivity() {
                             .weight(1f)
                             .fillMaxWidth()
                         ){
+                            val leftColor = retainAcrossRecomposition { mutableIntStateOf(0) }
+                            val middleColor = retainAcrossConfigChange { mutableIntStateOf(1) }
+                            val rightColor = retainAcrossProcessDeath { mutableIntStateOf(2) }
                             Column(Modifier
                                 .weight(1f)
-                                .background(BlueM)
+                                .background(COLORS[leftColor.intValue % 3])
                                 .fillMaxHeight()
                                 .clickable {
-                                    lhs.intValue += 1
-                                    result.intValue = lhs.intValue + rhs.intValue
-                                    Log.d("ComposeActivity", "lhs: ${lhs.intValue}")
+                                    leftColor.intValue += 1
                                 },
                             ) {
-                                Text(lhs.intValue.toString())
+                                Text(leftColor.intValue.toString())
                                 Spacer(Modifier)
                             }
                             Column(Modifier
                                 .weight(1f)
-                                .background(PurpleM)
+                                .background(COLORS[middleColor.intValue % 3])
                                 .fillMaxHeight()
                                 .clickable {
-                                    rhs.intValue += 1
-                                    result.intValue = lhs.intValue + rhs.intValue
-                                    Log.d("ComposeActivity", "rhs: ${rhs.intValue}")
+                                    middleColor.intValue += 1
                                 }
                             ) {
-                                Text(rhs.intValue.toString(), color = Color.White)
+                                Text(middleColor.intValue.toString(), color = Color.White)
                                 Spacer(Modifier)
                             }
                             Column(Modifier
                                 .weight(1f)
-                                .background(RedM)
+                                .background(COLORS[rightColor.intValue % 3])
                                 .fillMaxHeight()
+                                .clickable {
+                                    rightColor.intValue += 1
+                                }
                             ) {
-                                Text(result.intValue.toString())
+                                Text(rightColor.intValue.toString())
                                 Spacer(Modifier)
                             }
                         }

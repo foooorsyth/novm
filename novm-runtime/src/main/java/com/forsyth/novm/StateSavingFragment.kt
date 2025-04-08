@@ -3,16 +3,19 @@ package com.forsyth.novm
 import android.os.Bundle
 import androidx.`annotation`.CallSuper
 import androidx.fragment.app.Fragment
+import kotlinx.coroutines.CoroutineScope
 
-
-open class StateSavingFragment : Fragment(), NonConfigStateRegistryOwner {
+// TODO
+// implement NonConfigRegistryOwner? // do we need Frag support?
+// (in :novm-compose) implement Compose entry point // again, do we need this?
+open class StateSavingFragment : Fragment(), RetainedScopeOwner{
   val stateSaver: StateSaver = provideStateSaver()
 
   open var identificationStrategy: FragmentIdentificationStrategy =
       FragmentIdentificationStrategy.TAG
 
-  override val nonConfigStateRegistry: NonConfigStateRegistry
-    get() = TODO("Not yet implemented")
+  override val retainedScope: CoroutineScope
+    get() = (requireActivity() as StateSavingActivity).retainedScope
 
   @CallSuper
   override fun onCreate(savedInstanceState: Bundle?) {

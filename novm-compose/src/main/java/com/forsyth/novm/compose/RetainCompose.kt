@@ -85,7 +85,7 @@ fun <T : Any> retainAcrossProcessDeath(
     saver: Saver<T, out Any> = autoSaver(),
     key: String? = null,
     init: () -> T
-): T = rememberSaveable(inputs = inputs, saver = saver, key = key, init = init)
+): T = rememberSaveable(inputs = inputs, saver = saver, key = key) { init() }
 
 private const val MaxSupportedRadix = 36
 

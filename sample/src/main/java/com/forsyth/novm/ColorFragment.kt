@@ -1,7 +1,6 @@
 package com.forsyth.novm
 
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -24,11 +23,8 @@ class ColorFragment : StateSavingFragment() {
                 colorResInt = args.getInt("color")
             }
         }
-        // Inflate the layout for this fragment
         val root = inflater.inflate(R.layout.fragment_color, container, false)
-        Log.d(TAG, "Ready to restore color for $tag. Is it retained?")
         if (colorResInt != 0) {
-            Log.d(TAG, "Yes it is")
             root.findViewById<FrameLayout>(R.id.bg).setBackgroundColor(ContextCompat.getColor(requireActivity(), colorResInt))
         }
         return root

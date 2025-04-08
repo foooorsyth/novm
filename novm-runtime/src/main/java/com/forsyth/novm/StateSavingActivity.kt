@@ -6,14 +6,23 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.FragmentOnAttachListener
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlin.Any
 import kotlin.Suppress
 
-open class StateSavingActivity : AppCompatActivity(), NonConfigStateRegistryOwner {
+open class StateSavingActivity :
+    AppCompatActivity(),
+    NonConfigStateRegistryOwner,
+    RetainedScopeOwner {
     companion object {
         private const val TAG = "StateSavingActivity"
     }
 
+    private lateinit var _retainedScope: CoroutineScope
+    override val retainedScope: CoroutineScope
+        get() = _retainedScope
     val stateSaver: StateSaver = provideStateSaver()
     private var stateHolder: StateHolder? = null
     private val _nonConfigStateRegistry = NonConfigStateRegistry()
@@ -56,7 +65,12 @@ open class StateSavingActivity : AppCompatActivity(), NonConfigStateRegistryOwne
         @Suppress("DEPRECATION")
         val retainedState = lastCustomNonConfigurationInstance as? StateHolder
         if (retainedState != null) {
+            _retainedScope = retainedState.retainedScope!! // always non-null, set in onRetainCNCI
             stateSaver.restoreStateConfigChange(this, retainedState)
+        } else {
+            if (!::_retainedScope.isInitialized) {
+                _retainedScope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
+            }
         }
         // performRestore MUST be called before onCreate, even if retainedState is null
         // registry is stateful, needs internal 'isRestored' to be true
@@ -77,6 +91,7 @@ open class StateSavingActivity : AppCompatActivity(), NonConfigStateRegistryOwne
     @Suppress("OVERRIDE_DEPRECATION")
     override fun onRetainCustomNonConfigurationInstance(): Any? {
         val sh = stateSaver.saveStateConfigChange(this, stateHolder)
+        sh.retainedScope = this@StateSavingActivity.retainedScope // keep outside of generated code, must work even if no GeneratedStateSaver
         if (sh.nonConfigRegistryState == null) {
             sh.nonConfigRegistryState = mutableMapOf()
         }

@@ -1148,6 +1148,17 @@ class NoVMProcessor(
                 .initializer("%L", "null")
                 .build()
         )
+
+        builder.addProperty(
+            PropertySpec.builder(
+                "retainedScope",
+                ClassName("kotlinx.coroutines", "CoroutineScope").copy(nullable = true)
+            )
+                .mutable(true)
+                .addModifiers(KModifier.OVERRIDE)
+                .initializer("%L", "null")
+                .build()
+        )
         componentToStateMap.forEach { componentEntry ->
             val stateHolderEntry =
                 stateHoldersForComponents[componentEntry.key]!!

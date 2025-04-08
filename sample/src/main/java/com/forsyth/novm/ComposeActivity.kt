@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -28,10 +30,15 @@ import com.forsyth.novm.compose.setContent
 import com.forsyth.novm.compose.retainAcrossConfigChange
 import com.forsyth.novm.compose.retainAcrossProcessDeath
 import com.forsyth.novm.compose.retainAcrossRecomposition
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class ComposeActivity : StateSavingActivity() {
 
     companion object {
+        const val TAG = "ComposeActivity"
         val COLORS: Array<Color> = arrayOf( BlueM, PurpleM, RedM )
     }
 
@@ -71,40 +78,49 @@ class ComposeActivity : StateSavingActivity() {
                             .weight(1f)
                             .fillMaxWidth()
                         ){
-                            val leftColor = retainAcrossRecomposition { mutableIntStateOf(0) }
-                            val middleColor = retainAcrossConfigChange { mutableIntStateOf(1) }
-                            val rightColor = retainAcrossProcessDeath { mutableIntStateOf(2) }
+                            var leftColor by retainAcrossRecomposition { mutableIntStateOf(0) }
+                            var middleColor by retainAcrossConfigChange { mutableIntStateOf(1) }
+                            var rightColor by retainAcrossProcessDeath { mutableIntStateOf(2) }
                             Column(Modifier
                                 .weight(1f)
-                                .background(COLORS[leftColor.intValue % 3])
+                                .background(COLORS[leftColor % 3])
                                 .fillMaxHeight()
                                 .clickable {
-                                    leftColor.intValue += 1
+                                    leftColor += 1
                                 },
                             ) {
-                                Text(leftColor.intValue.toString())
+                                Text(leftColor.toString())
                                 Spacer(Modifier)
                             }
                             Column(Modifier
                                 .weight(1f)
-                                .background(COLORS[middleColor.intValue % 3])
+                                .background(COLORS[middleColor % 3])
                                 .fillMaxHeight()
                                 .clickable {
-                                    middleColor.intValue += 1
+                                    middleColor += 1
                                 }
                             ) {
-                                Text(middleColor.intValue.toString(), color = Color.White)
+                                Text(middleColor.toString(), color = Color.White)
                                 Spacer(Modifier)
                             }
                             Column(Modifier
                                 .weight(1f)
-                                .background(COLORS[rightColor.intValue % 3])
+                                .background(COLORS[rightColor % 3])
                                 .fillMaxHeight()
                                 .clickable {
-                                    rightColor.intValue += 1
+                                    rightColor += 1
+                                    // retainedScope survives config change
+                                    // has same lifetime as viewModelScope
+                                    retainedScope.launch {
+                                        withContext(Dispatchers.IO) {
+                                            Log.d(TAG, "started 10 second computation that will survive config change...")
+                                            delay(10_000)
+                                            Log.d(TAG, "finished 10 second computation")
+                                        }
+                                    }
                                 }
                             ) {
-                                Text(rightColor.intValue.toString())
+                                Text(rightColor.toString())
                                 Spacer(Modifier)
                             }
                         }

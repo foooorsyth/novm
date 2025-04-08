@@ -5,12 +5,13 @@
 ### Quick Start
 
 First, [add the ksp plugin to your project](https://developer.android.com/build/migrate-to-ksp#add-ksp). 
-Then, add the novm runtime and compiler to your module's build.gradle.kts file:
+Then, add the novm runtime and compiler to your module's build.gradle.kts file. Optionally, add 
+novm-compose as well if you're using Compose:
 ```kotlin
 dependencies {
     val novm_version = "1.2.0"
     implementation("com.forsyth.novm:novm-runtime:$novm_version")
-    implementation("com.forsyth.novm:novm-compose:$novm_version") // optional, for compose support
+    implementation("com.forsyth.novm:novm-compose:$novm_version") // optional
     ksp("com.forsyth.novm:novm-compiler:$novm_version")
 }
 ```
@@ -62,11 +63,11 @@ class SomeFragment : StateSavingFragment() {
 
 Fragments are identified after recreation based on their ```identificationStrategy```:
 
-**FragmentIdentificationStrategy.TAG (default)**: Fragments are identified by their unique ```tag``` (you must give each of your Fragments using ```@Retain``` a unique tag using this setting)
+```FragmentIdentificationStrategy.TAG``` (default): Fragments are identified by their unique ```tag``` (you must give each of your Fragments using ```@Retain``` a unique tag using this setting)
 
-**FragmentIdentificationStrategy.ID**: Fragments are identified by their ```id```
+```FragmentIdentificationStrategy.ID```: Fragments are identified by their ```id```
 
-**FragmentIdentificationStrategy.CLASS**: Fragments are identified by their class
+```FragmentIdentificationStrategy.CLASS```: Fragments are identified by their class
 
 ### Compose support
 

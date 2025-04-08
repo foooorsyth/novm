@@ -3,7 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.ksp)
     alias(libs.plugins.compose.compiler)
-    id("com.forsyth.novm.novm-plugin") version "1.0.0"
+    //id("com.forsyth.novm.novm-plugin") version "1.0.0"
 }
 
 android {

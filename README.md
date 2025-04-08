@@ -6,7 +6,7 @@
 
 First, [add the ksp plugin to your project](https://developer.android.com/build/migrate-to-ksp#add-ksp). 
 Then, add the novm runtime and compiler to your module's build.gradle.kts file. Optionally, add 
-novm-compose as well if you're using Compose:
+novm-compose for Compose support:
 ```kotlin
 dependencies {
     val novm_version = "1.2.0"

@@ -39,7 +39,7 @@ State that is designated to be retained across process death must be of a type s
 See the [chart below](#Supported-types-for-retention-across-process-death) for supported types. See [the docs](https://developer.android.com/topic/libraries/architecture/saving-states#onsaveinstancestate) for more guidance on
 state retention in the event of process death.
 
-All variables annotated with @Retain must be have ```public``` visibility.
+All variables annotated with ```@Retain``` must be have ```public``` visibility.
 
 ### Fragment support
 
@@ -62,7 +62,7 @@ class SomeFragment : StateSavingFragment() {
 
 Fragments are identified after recreation based on their ```identificationStrategy```:
 
-**FragmentIdentificationStrategy.TAG (default)**: Fragments are identified by their unique ```tag``` (you must give each of your Fragments using @Retain a unique tag)
+**FragmentIdentificationStrategy.TAG (default)**: Fragments are identified by their unique ```tag``` (you must give each of your Fragments using ```@Retain``` a unique tag using this setting)
 
 **FragmentIdentificationStrategy.ID**: Fragments are identified by their ```id```
 
@@ -71,6 +71,8 @@ Fragments are identified after recreation based on their ```identificationStrate
 ### Compose support
 
 ```kotlin
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import com.forsyth.novm.StateSavingActivity
 import com.forsyth.novm.compose.setContent
 import com.forsyth.novm.compose.retainAcrossRecomposition
@@ -84,11 +86,11 @@ class ComposeActivity : StateSavingActivity() {
         // new entry point! this is not `androidx.activity.compose.setContent`
         setContent {
             // survives recomposition -- equivalent to `remember`
-            var foo = retainAcrossRecomposition { mutableIntStateOf(1) }
+            var foo by retainAcrossRecomposition { mutableIntStateOf(1) }
             // survives config change (can be `Any?`) without a ViewModel
-            var bar = retainAcrossConfigChange { mutableStateOf(NonSerializableClass()) }
+            var bar by retainAcrossConfigChange { mutableStateOf(NonSerializableClass()) }
             // survives process death (must be Bundle type) -- equivalent to `rememberSaveable`
-            var baz = retainAcrossProcessDeath { mutableStateOf(SerializableClass()) } 
+            var baz by retainAcrossProcessDeath { mutableStateOf(SerializableClass()) }
             // ... 
         }
         // ...
@@ -100,7 +102,15 @@ class ComposeActivity : StateSavingActivity() {
 Additionally, [MutableState](https://developer.android.com/reference/kotlin/androidx/compose/runtime/MutableState) 
 can always be declared in your component scope (Activities & Fragments), annotated with ```@Retain```, and passed into your Compose composition.
 
-### Multi-module Support
+### Coroutine support
+
+```StateSavingActivity``` offers a ```retainedScope``` field, which is a ```CoroutineScope``` that will
+survive configuration change. Computation spanning multiple configuration changes can be safely executed 
+here. By default, execution occurs on ```Dispatchers.Main``` -- to execute in the background, you can use 
+```withContext(Dispatchers.IO) { ... }```. ```retainedScope```'s lifetime is effectively the same as a 
+```viewModelScope``` from a ```ViewModel``` in ```StateSavingActivity```'s ```ViewModelStore```.
+
+### Multi-module support
 
 novm supports apps with multiple modules. Library modules must declare themselves as dependencies in their build.gradle.kts file:
 ```kotlin

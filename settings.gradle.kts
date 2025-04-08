@@ -9,6 +9,7 @@ pluginManagement {
         }
         mavenCentral()
         gradlePluginPortal()
+        mavenLocal()
     }
 }
 dependencyResolutionManagement {
@@ -16,6 +17,7 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        mavenLocal()
     }
 }
 
@@ -28,3 +30,4 @@ include(":sample-lib")
 include(":sample-lib-another")
 include(":novm-compose")
 include(":novm-compose-navigation")
+include(":novm-plugin")

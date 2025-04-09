@@ -1,0 +1,1 @@
+./gradlew novm-plugin:clean novm-plugin:publishToMavenLocal

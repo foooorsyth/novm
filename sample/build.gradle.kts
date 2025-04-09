@@ -55,7 +55,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.test.manifest)
-
+    implementation(libs.androidx.navigation.compose)
     // region COMPOSE
     val composeBom = platform("androidx.compose:compose-bom:2025.02.00")
     implementation(composeBom)

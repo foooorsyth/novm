@@ -113,7 +113,7 @@ class ComposeActivity : StateSavingActivity() {
                                     // has same lifetime as viewModelScope
                                     retainedScope.launch {
                                         withContext(Dispatchers.IO) {
-                                            Log.d(TAG, "started 10 second computation that will survive config change...")
+                                            Log.d(TAG, "started 10 second computation that will survive config change. rotate the screen now!")
                                             delay(10_000)
                                             Log.d(TAG, "finished 10 second computation")
                                         }

@@ -36,4 +36,7 @@ publishing {
 dependencies {
     implementation(gradleApi())
     implementation(libs.asm)
+    implementation(libs.asm.util)
+    implementation(libs.gradle)
+    implementation(libs.gradle.kotlin)
 }

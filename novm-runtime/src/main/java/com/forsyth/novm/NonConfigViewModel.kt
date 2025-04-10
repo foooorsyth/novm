@@ -21,7 +21,7 @@ class NonConfigViewModel : ViewModel(), NonConfigStateRegistryOwner {
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val _nonConfigStateRegistry = NonConfigStateRegistry()
     private val nonConfigRegistryController = NonConfigStateRegistryController.create(this)
-    private var nonConfigRegistryState: MutableMap<String, Any?> = mutableMapOf()
+    private var nonConfigRegistryState: MutableMap<String, Any?>? = null
 
     init {
         this.lifecycleRegistry.currentState = Lifecycle.State.INITIALIZED
@@ -37,10 +37,11 @@ class NonConfigViewModel : ViewModel(), NonConfigStateRegistryOwner {
     fun performRestore() {
         this.lifecycleRegistry.currentState = Lifecycle.State.RESUMED
         nonConfigRegistryController.performRestore(nonConfigRegistryState)
-        nonConfigRegistryState = mutableMapOf() // reset it here?
+        nonConfigRegistryState = null
     }
 
-    override fun onCleared() {
-        nonConfigRegistryController.performSave(nonConfigRegistryState)
+    fun performSave() {
+        nonConfigRegistryState = mutableMapOf()
+        nonConfigRegistryController.performSave(nonConfigRegistryState!!)
     }
 }

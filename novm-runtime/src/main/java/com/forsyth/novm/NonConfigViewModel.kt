@@ -41,7 +41,14 @@ class NonConfigViewModel : ViewModel(), NonConfigStateRegistryOwner {
     }
 
     fun performSave() {
-        nonConfigRegistryState = mutableMapOf()
+        if (nonConfigRegistryState == null) {
+            nonConfigRegistryState = mutableMapOf()
+        }
         nonConfigRegistryController.performSave(nonConfigRegistryState!!)
+    }
+
+    override fun onCleared() {
+        // canary for vm leak
+        this.lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
     }
 }

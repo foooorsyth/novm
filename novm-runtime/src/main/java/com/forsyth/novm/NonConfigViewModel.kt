@@ -26,6 +26,7 @@ class NonConfigViewModel : ViewModel(), NonConfigStateRegistryOwner {
     init {
         this.lifecycleRegistry.currentState = Lifecycle.State.INITIALIZED
         this.nonConfigRegistryController.performAttach()
+        this.lifecycleRegistry.currentState = Lifecycle.State.RESUMED
     }
 
     override val nonConfigStateRegistry: NonConfigStateRegistry
@@ -35,7 +36,6 @@ class NonConfigViewModel : ViewModel(), NonConfigStateRegistryOwner {
         get() = lifecycleRegistry
 
     fun performRestore() {
-        this.lifecycleRegistry.currentState = Lifecycle.State.RESUMED
         nonConfigRegistryController.performRestore(nonConfigRegistryState)
         nonConfigRegistryState = null
     }

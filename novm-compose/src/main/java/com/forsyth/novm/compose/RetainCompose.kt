@@ -1,13 +1,21 @@
 package com.forsyth.novm.compose
 
+import android.annotation.SuppressLint
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisallowComposableCalls
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.currentCompositeKeyHash
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.autoSaver
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.LocalSavedStateRegistryOwner
+import androidx.compose.ui.platform.LocalView
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.findViewTreeViewModelStoreOwner
+import androidx.navigation.NavBackStackEntry
+import com.forsyth.novm.NonConfigViewModel
 
 @Composable
 inline fun <T> retainAcrossRecomposition(crossinline init: @DisallowComposableCalls () -> T): T =
@@ -40,6 +48,7 @@ inline fun <T> retainAcrossRecomposition(
     crossinline init: @DisallowComposableCalls () -> T
 ): T = remember(keys = inputs) { init() }
 
+@SuppressLint("RestrictedApi")
 @Composable
 fun <T> retainAcrossConfigChange(
     vararg inputs: Any?,
@@ -63,10 +72,27 @@ fun <T> retainAcrossConfigChange(
     } else {
         compositeKey.toString(MaxSupportedRadix)
     }
-    val nonConfigRegistry = LocalNonConfigStateRegistry.current
+    var nonConfigRegistry = LocalNonConfigStateRegistry.current
+    if (nonConfigRegistry == null) { // we didn't use our entry point, find it another way
+        val vmso = LocalSavedStateRegistryOwner.current as? ViewModelStoreOwner ?:
+                    LocalView.current.findViewTreeViewModelStoreOwner()
+        if (vmso == null) {
+            throw IllegalStateException("bad bad bad")
+        }
+        val localView = LocalView.current
+        val vm = vmso.viewModelStore[NonConfigViewModelKey] as? NonConfigViewModel ?: NonConfigViewModel()
+        nonConfigRegistry = retainAcrossRecomposition {
+            DisposableNonConfigStateRegistryCompose(localView, vm)
+        }
+        DisposableEffect(Unit) {
+            onDispose {
+                nonConfigRegistry.dispose()
+            }
+        }
+    }
     val holder = retainAcrossRecomposition {
         // value is restored using the registry or created via [init] lambda
-        val restored = nonConfigRegistry?.consumeRestored(finalKey)
+        val restored = nonConfigRegistry.consumeRestored(finalKey)
         val finalValue = restored ?: init()
         NonConfigHolder(nonConfigRegistry, finalKey, finalValue, inputs)
     }
@@ -88,6 +114,7 @@ fun <T : Any> retainAcrossProcessDeath(
 ): T = rememberSaveable(inputs = inputs, saver = saver, key = key) { init() }
 
 private const val MaxSupportedRadix = 36
+private const val NonConfigViewModelKey = "com.forsyth.novm.NonConfigViewModel"
 
 
 

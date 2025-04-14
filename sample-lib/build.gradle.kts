@@ -38,6 +38,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":novm-core"))
     implementation(project(":novm-runtime"))
     ksp(project(":novm-compiler"))
     implementation(libs.androidx.core.ktx)

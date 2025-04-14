@@ -47,6 +47,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":novm-core"))
     implementation(project(":novm-runtime"))
     implementation(project(":novm-compose"))
     implementation(project(":sample-lib"))

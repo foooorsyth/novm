@@ -51,25 +51,25 @@ import com.forsyth.novm.Retain
 import com.forsyth.novm.StateDestroyingEvent
 import com.forsyth.novm.StateSavingFragment
 class SomeFragment : StateSavingFragment() {
-    @Retain(across = StateDestroyingEvent.CONFIGURATION_CHANGE)
+    @Retain(across = StateDestroyingEvent.CONFIG_CHANGE)
     lateinit var largeImage: Bitmap
 
     @Retain(across = StateDestroyingEvent.PROCESS_DEATH)
     lateinit var computedHash: String
 
     // Optional override, see below
-    override var identificationStrategy = FragmentIdentificationStrategy.ID
+    override var identificationStrategy = FragmentIdentificationStrategy.BY_ID
     // ...
 }
 ```
 
 Fragments are identified after recreation based on their ```identificationStrategy```:
 
-```FragmentIdentificationStrategy.TAG``` (default): Fragments are identified by their unique ```tag``` (you must give each of your Fragments using ```@Retain``` a unique tag using this setting)
+```FragmentIdentificationStrategy.BY_TAG``` (default): Fragments are identified by their unique ```tag``` (you must give each of your Fragments using ```@Retain``` a unique tag using this setting)
 
-```FragmentIdentificationStrategy.ID```: Fragments are identified by their ```id```
+```FragmentIdentificationStrategy.BY_ID```: Fragments are identified by their ```id```
 
-```FragmentIdentificationStrategy.CLASS```: Fragments are identified by their class
+```FragmentIdentificationStrategy.BY_CLASS```: Fragments are identified by their class
 
 ### Compose support
 

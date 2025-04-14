@@ -19,13 +19,24 @@ import androidx.lifecycle.ViewModel
 class NonConfigViewModel : ViewModel(), NonConfigStateRegistryOwner {
     @SuppressLint("StaticFieldLeak") // lifecycleowner ref (this) is weakref
     private val lifecycleRegistry = LifecycleRegistry(this)
-    private val _nonConfigStateRegistry = NonConfigStateRegistry()
+    private var _nonConfigStateRegistry = NonConfigStateRegistry()
     private val nonConfigRegistryController = NonConfigStateRegistryController.create(this)
-    private var nonConfigRegistryState: MutableMap<String, Any?>? = null
+    private var nonConfigRegistryState: MutableMap<String, Any?> = mutableMapOf()
+
+    /*
+        TODO constraints
+        unlike an activity, this viewmodel is only created once
+
+        registry can only be restored once. attempts to restore after already restoring will fail
+        registry must be attached before CREATE
+        registry must be restored before consumption happens (which happens on line 101 in RetainCompsose when
+        DisposableNonConfigStateRegistryCompose is initialized
+     */
 
     init {
         this.lifecycleRegistry.currentState = Lifecycle.State.INITIALIZED
         this.nonConfigRegistryController.performAttach()
+        nonConfigRegistryController.performRestore(nonConfigRegistryState)
         this.lifecycleRegistry.currentState = Lifecycle.State.RESUMED
     }
 
@@ -35,16 +46,10 @@ class NonConfigViewModel : ViewModel(), NonConfigStateRegistryOwner {
     override val lifecycle: Lifecycle
         get() = lifecycleRegistry
 
-    fun performRestore() {
-        nonConfigRegistryController.performRestore(nonConfigRegistryState)
-        nonConfigRegistryState = null
-    }
-
     fun performSave() {
-        if (nonConfigRegistryState == null) {
-            nonConfigRegistryState = mutableMapOf()
-        }
-        nonConfigRegistryController.performSave(nonConfigRegistryState!!)
+        _nonConfigStateRegistry = NonConfigStateRegistry()
+        nonConfigRegistryState = mutableMapOf()
+        nonConfigRegistryController.performSave(nonConfigRegistryState)
     }
 
     override fun onCleared() {

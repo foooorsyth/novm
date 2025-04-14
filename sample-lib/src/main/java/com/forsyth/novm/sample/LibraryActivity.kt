@@ -6,6 +6,6 @@ import com.forsyth.novm.StateSavingActivity
 
 open class LibraryActivity : StateSavingActivity() {
 
-    @Retain(across = [StateDestroyingEvent.CONFIGURATION_CHANGE])
+    @Retain(across = StateDestroyingEvent.CONFIG_CHANGE)
     var libraryState: Boolean = false
 }

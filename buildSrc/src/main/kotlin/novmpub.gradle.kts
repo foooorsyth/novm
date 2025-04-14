@@ -1,9 +1,10 @@
 object Publishing {
     const val GROUP = "com.forsyth.novm"
+    const val ARTIFACT_ID_CORE = "novm-core"
     const val ARTIFACT_ID_RUNTIME = "novm-runtime"
     const val ARTIFACT_ID_COMPILER = "novm-compiler"
     const val ARTIFACT_ID_COMPOSE = "novm-compose"
-    const val VERSION = "1.2.0"
+    const val VERSION = "1.3.0"
     const val PROJ_NAME_RUNTIME = "novm runtime"
     const val PROJ_NAME_COMPILER = "novm compiler"
     const val PROJ_NAME_COMPOSE = "novm compose"

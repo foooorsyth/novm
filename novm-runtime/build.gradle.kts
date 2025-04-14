@@ -75,7 +75,7 @@ mavenPublishing {
 }
 
 dependencies {
-    api(project(":novm-core"))
+    implementation(project(":novm-core"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.lifecycle.common.jvm)

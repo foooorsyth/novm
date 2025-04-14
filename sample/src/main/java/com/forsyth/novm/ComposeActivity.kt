@@ -42,10 +42,10 @@ class ComposeActivity : StateSavingActivity() {
         val COLORS: Array<Color> = arrayOf( BlueM, PurpleM, RedM )
     }
 
-    @Retain(across = [StateDestroyingEvent.CONFIGURATION_CHANGE])
+    @Retain(across = StateDestroyingEvent.CONFIG_CHANGE)
     lateinit var imagePainter: ImagePainter
 
-    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    @Retain(across = StateDestroyingEvent.PROCESS_DEATH)
     lateinit var computedHash: String
 
     override fun onCreate(savedInstanceState: Bundle?) {

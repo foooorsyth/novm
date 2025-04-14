@@ -9,10 +9,12 @@ Then, add the novm runtime and compiler to your module's build.gradle.kts file. 
 novm-compose for Compose support:
 ```kotlin
 dependencies {
-    val novm_version = "1.2.0"
+    val novm_version = "1.3.0"
+    implementation("com.forsyth.novm:novm-core:$novm_version")
     implementation("com.forsyth.novm:novm-runtime:$novm_version")
-    implementation("com.forsyth.novm:novm-compose:$novm_version") // optional
     ksp("com.forsyth.novm:novm-compiler:$novm_version")
+    // optional, for compose support
+    implementation("com.forsyth.novm:novm-compose:$novm_version")
 }
 ```
 
@@ -25,12 +27,12 @@ import com.forsyth.novm.StateSavingActivity
 class MainActivity : StateSavingActivity() {
     // largeImage will survive configuration change
     // see: https://developer.android.com/guide/topics/resources/runtime-changes
-    @Retain(across = [StateDestroyingEvent.CONFIGURATION_CHANGE])
+    @Retain(across = StateDestroyingEvent.CONFIG_CHANGE)
     lateinit var largeImage: Bitmap 
 
     // computedHash will survive system-initiated process death
     // see: https://developer.android.com/guide/components/activities/activity-lifecycle#asem
-    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    @Retain(across = StateDestroyingEvent.PROCESS_DEATH)
     lateinit var computedHash: String
     // ...
 }
@@ -49,10 +51,10 @@ import com.forsyth.novm.Retain
 import com.forsyth.novm.StateDestroyingEvent
 import com.forsyth.novm.StateSavingFragment
 class SomeFragment : StateSavingFragment() {
-    @Retain(across = [StateDestroyingEvent.CONFIGURATION_CHANGE])
+    @Retain(across = StateDestroyingEvent.CONFIGURATION_CHANGE)
     lateinit var largeImage: Bitmap
 
-    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    @Retain(across = StateDestroyingEvent.PROCESS_DEATH)
     lateinit var computedHash: String
 
     // Optional override, see below

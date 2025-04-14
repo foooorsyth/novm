@@ -5,6 +5,6 @@ import com.forsyth.novm.Retain
 import com.forsyth.novm.StateDestroyingEvent
 
 class AnotherLibraryActivity : AppCompatActivity() {
-    @Retain(across = [StateDestroyingEvent.CONFIGURATION_CHANGE])
+    @Retain(across = StateDestroyingEvent.CONFIG_CHANGE)
     var foo: Boolean = false
 }

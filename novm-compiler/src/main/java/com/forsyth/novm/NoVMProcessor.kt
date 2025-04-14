@@ -34,7 +34,6 @@ import com.squareup.kotlinpoet.ksp.toTypeName
 import com.squareup.kotlinpoet.ksp.writeTo
 import java.security.MessageDigest
 import java.util.Locale
-import kotlin.random.Random
 
 
 const val COMPONENT_ACTIVITY_QUALIFIED_NAME = "androidx.activity.ComponentActivity"
@@ -435,7 +434,7 @@ class NoVMProcessor(
             activityToStateEntry.value
                 .filter { ksPropertyDeclaration ->
                     ksPropertyDeclaration.getAnnotationsByType(Retain::class).toList()
-                        .first().across.contains(StateDestroyingEvent.PROCESS_DEATH)
+                        .first().across == StateDestroyingEvent.PROCESS_DEATH
                 }
                 .forEach filteredForEach@{ ksPropertyDeclaration ->
                     val bundleFunPostfixRet = getBundleFunPostfix(resolver, ksPropertyDeclaration, logger, isDebugLoggingEnabled)
@@ -475,7 +474,7 @@ class NoVMProcessor(
             fragmentToStateEntry.value
                 .filter { ksPropertyDeclaration ->
                     ksPropertyDeclaration.getAnnotationsByType(Retain::class).toList()
-                        .first().across.contains(StateDestroyingEvent.PROCESS_DEATH)
+                        .first().across == StateDestroyingEvent.PROCESS_DEATH
                 }
                 .forEach filteredForEach@{ ksPropertyDeclaration ->
                     val bundleFunPostfixRet = getBundleFunPostfix(resolver, ksPropertyDeclaration, logger, isDebugLoggingEnabled)
@@ -511,7 +510,7 @@ class NoVMProcessor(
             val lKvp = generateBundleFragmentKeyValuePairForClass(stateHoldersForComponents[fragmentToStateEntry.key]!!.name!!)
             bundleKeyValuePairs[lKvp.first] = lKvp.second
             funBuilder.beginControlFlow("when (component.identificationStrategy) {")
-            funBuilder.beginControlFlow("FragmentIdentificationStrategy.ID -> {")
+            funBuilder.beginControlFlow("FragmentIdentificationStrategy.BY_ID -> {")
             funBuilder.addStatement(
                 "bundle.putBundle(${
                     generateBundleFragmentKeyStringForId(
@@ -520,7 +519,7 @@ class NoVMProcessor(
                 }, fragBundle)"
             )
             funBuilder.endControlFlow() // close CONTAINER_ID
-            funBuilder.beginControlFlow("FragmentIdentificationStrategy.TAG -> {")
+            funBuilder.beginControlFlow("FragmentIdentificationStrategy.BY_TAG -> {")
             funBuilder.beginControlFlow("if (component.tag == null) {")
             funBuilder.addStatement("throw RuntimeException(\"identificationStrategy for Fragment@\${Integer.toHexString(System.identityHashCode(component))} of type \${component::class.java.simpleName} is TAG but Fragment's tag field is null\")")
             funBuilder.endControlFlow() // close if
@@ -532,7 +531,7 @@ class NoVMProcessor(
                 }, fragBundle)"
             )
             funBuilder.endControlFlow() // close TAG
-            funBuilder.beginControlFlow("FragmentIdentificationStrategy.CLASS -> {")
+            funBuilder.beginControlFlow("FragmentIdentificationStrategy.BY_CLASS -> {")
             funBuilder.addStatement("bundle.putBundle(kl_$clsSimpleName, fragBundle)")
             funBuilder.endControlFlow() // close CLASS
             funBuilder.endControlFlow() // close when (id strat switch)
@@ -587,7 +586,7 @@ class NoVMProcessor(
             activityToStateEntry.value
                 .filter { ksPropertyDeclaration ->
                     ksPropertyDeclaration.getAnnotationsByType(Retain::class).toList()
-                        .first().across.contains(StateDestroyingEvent.PROCESS_DEATH)
+                        .first().across == StateDestroyingEvent.PROCESS_DEATH
                 }
                 .forEach filteredForEach@{ ksPropertyDeclaration ->
                     val resolvedType = ksPropertyDeclaration.type.resolve()
@@ -659,13 +658,13 @@ class NoVMProcessor(
         fragmentsToStates.forEach { fragmentToStateEntry ->
             funBuilder.beginControlFlow("is ${fragmentToStateEntry.key} -> {")
             funBuilder.beginControlFlow("val fragBundleKey = when (component.identificationStrategy) {")
-            funBuilder.beginControlFlow("FragmentIdentificationStrategy.TAG -> {")
+            funBuilder.beginControlFlow("FragmentIdentificationStrategy.BY_TAG -> {")
             funBuilder.addStatement(generateBundleFragmentKeyStringForTag(stateHoldersForComponents[fragmentToStateEntry.key]!!.name!!))
             funBuilder.endControlFlow()
-            funBuilder.beginControlFlow("FragmentIdentificationStrategy.ID -> {")
+            funBuilder.beginControlFlow("FragmentIdentificationStrategy.BY_ID -> {")
             funBuilder.addStatement(generateBundleFragmentKeyStringForId(stateHoldersForComponents[fragmentToStateEntry.key]!!.name!!))
             funBuilder.endControlFlow()
-            funBuilder.beginControlFlow("FragmentIdentificationStrategy.CLASS -> {")
+            funBuilder.beginControlFlow("FragmentIdentificationStrategy.BY_CLASS -> {")
             funBuilder.addStatement(generateBundleFragmentKeyValuePairForClass(stateHoldersForComponents[fragmentToStateEntry.key]!!.name!!).first)
             funBuilder.endControlFlow()
             funBuilder.endControlFlow() // close when (id strat for bundle key)
@@ -676,7 +675,7 @@ class NoVMProcessor(
             fragmentToStateEntry.value
                 .filter { ksPropertyDeclaration ->
                     ksPropertyDeclaration.getAnnotationsByType(Retain::class).toList()
-                        .first().across.contains(StateDestroyingEvent.PROCESS_DEATH)
+                        .first().across == StateDestroyingEvent.PROCESS_DEATH
                 }
                 .forEach filteredForEach@{ ksPropertyDeclaration ->
                     val resolvedType = ksPropertyDeclaration.type.resolve()
@@ -821,7 +820,7 @@ class NoVMProcessor(
             funBuilder.beginControlFlow("if (stateHolder.$activityStateHolderFieldName != null) {")
             activityToStateEntry.value.filter { ksPropertyDeclaration ->
                 ksPropertyDeclaration.getAnnotationsByType(Retain::class).toList()
-                    .first().across.contains(StateDestroyingEvent.CONFIGURATION_CHANGE)
+                    .first().across == StateDestroyingEvent.CONFIG_CHANGE
             }
                 .forEach { ksPropertyDeclaration ->
                     // need to find equivalent field in state holder for this activity
@@ -847,11 +846,11 @@ class NoVMProcessor(
             val classDeclOfFrag = resolver.getClassDeclarationByName(fragmentToStateEntry.key)!!
             val configChangeProps = fragmentToStateEntry.value.filter { ksPropertyDeclaration ->
                 ksPropertyDeclaration.getAnnotationsByType(Retain::class).toList()
-                    .first().across.contains(StateDestroyingEvent.CONFIGURATION_CHANGE)
+                    .first().across == StateDestroyingEvent.CONFIG_CHANGE
             }
             funBuilder.beginControlFlow("is ${fragmentToStateEntry.key} -> {")
             funBuilder.beginControlFlow("val fragStateHolder = when(component.identificationStrategy) {")
-            funBuilder.beginControlFlow("FragmentIdentificationStrategy.CLASS -> {")
+            funBuilder.beginControlFlow("FragmentIdentificationStrategy.BY_CLASS -> {")
             val typeSpecOfStateHolder = stateHoldersForComponents[fragmentToStateEntry.key]!!
             val fragStateHolderFieldNameForClass =
                 "${lowercaseFirstLetter(typeSpecOfStateHolder.name!!)}ByClass"
@@ -859,7 +858,7 @@ class NoVMProcessor(
                 "stateHolder.$fragStateHolderFieldNameForClass"
             )
             funBuilder.endControlFlow() // close is (CLASS)
-            funBuilder.beginControlFlow("FragmentIdentificationStrategy.TAG -> {")
+            funBuilder.beginControlFlow("FragmentIdentificationStrategy.BY_TAG-> {")
             val fragStateHolderFieldNameForTag =
                 "${lowercaseFirstLetter(typeSpecOfStateHolder.name!!)}ByTag"
             funBuilder.beginControlFlow("if (component.tag == null) {")
@@ -872,7 +871,7 @@ class NoVMProcessor(
                 "stateHolder.$fragStateHolderFieldNameForTag[component.tag!!]"
             )
             funBuilder.endControlFlow() // close is (TAG)
-            funBuilder.beginControlFlow("FragmentIdentificationStrategy.ID -> {")
+            funBuilder.beginControlFlow("FragmentIdentificationStrategy.BY_ID -> {")
             val fragStateHolderFieldNameForId =
                 "${lowercaseFirstLetter(typeSpecOfStateHolder.name!!)}ById"
             funBuilder.addStatement(
@@ -897,17 +896,17 @@ class NoVMProcessor(
                 }
             }
             funBuilder.beginControlFlow("when(component.identificationStrategy) {")
-            funBuilder.beginControlFlow("FragmentIdentificationStrategy.CLASS -> {")
+            funBuilder.beginControlFlow("FragmentIdentificationStrategy.BY_CLASS -> {")
             funBuilder.addStatement(
                 "stateHolder.$fragStateHolderFieldNameForClass = null"
             )
             funBuilder.endControlFlow() // close is (CLASS)
-            funBuilder.beginControlFlow("FragmentIdentificationStrategy.TAG -> {")
+            funBuilder.beginControlFlow("FragmentIdentificationStrategy.BY_TAG -> {")
             funBuilder.addStatement(
                 "stateHolder.$fragStateHolderFieldNameForTag.remove(component.tag!!)"
             )
             funBuilder.endControlFlow() // close is (TAG)
-            funBuilder.beginControlFlow("FragmentIdentificationStrategy.ID -> {")
+            funBuilder.beginControlFlow("FragmentIdentificationStrategy.BY_ID -> {")
             funBuilder.addStatement(
                 "stateHolder.$fragStateHolderFieldNameForId.remove(component.id)"
             )
@@ -979,7 +978,7 @@ class NoVMProcessor(
             )
             activityToStateEntry.value.filter { ksPropertyDeclaration ->
                 ksPropertyDeclaration.getAnnotationsByType(Retain::class).toList()
-                    .first().across.contains(StateDestroyingEvent.CONFIGURATION_CHANGE)
+                    .first().across == StateDestroyingEvent.CONFIG_CHANGE
             }
                 .forEach { ksPropertyDeclaration ->
                     if (ksPropertyDeclaration.modifiers.contains(Modifier.LATEINIT)) {
@@ -1014,11 +1013,11 @@ class NoVMProcessor(
             val fragmentStateHolderTypeSpec = stateHoldersForComponents[fragmentToStateEntry.key]!!
             val configChangeProps = fragmentToStateEntry.value.filter { ksPropertyDeclaration ->
                 ksPropertyDeclaration.getAnnotationsByType(Retain::class).toList()
-                    .first().across.contains(StateDestroyingEvent.CONFIGURATION_CHANGE)
+                    .first().across == StateDestroyingEvent.CONFIG_CHANGE
             }
             funBuilder.beginControlFlow("is ${fragmentToStateEntry.key} -> {")
             funBuilder.beginControlFlow("when(component.identificationStrategy) {")
-            funBuilder.beginControlFlow("FragmentIdentificationStrategy.CLASS -> {")
+            funBuilder.beginControlFlow("FragmentIdentificationStrategy.BY_CLASS -> {")
             val fragStateHolderFieldNameForClass =
                 "${lowercaseFirstLetter(fragmentStateHolderTypeSpec.name!!)}ByClass"
             funBuilder.addStatement(
@@ -1048,7 +1047,7 @@ class NoVMProcessor(
                 }
             }
             funBuilder.endControlFlow() // close is (CLASS)
-            funBuilder.beginControlFlow("FragmentIdentificationStrategy.TAG -> {")
+            funBuilder.beginControlFlow("FragmentIdentificationStrategy.BY_TAG -> {")
             val fragStateHolderFieldNameForTag =
                 "${lowercaseFirstLetter(fragmentStateHolderTypeSpec.name!!)}ByTag"
             funBuilder.beginControlFlow("if (component.tag == null) {")
@@ -1085,7 +1084,7 @@ class NoVMProcessor(
                 "stateHolder.$fragStateHolderFieldNameForTag[component.tag!!] = fragStateHolder"
             )
             funBuilder.endControlFlow() // close is (TAG)
-            funBuilder.beginControlFlow("FragmentIdentificationStrategy.ID -> {")
+            funBuilder.beginControlFlow("FragmentIdentificationStrategy.BY_ID -> {")
             val fragStateHolderFieldNameForId =
                 "${lowercaseFirstLetter(fragmentStateHolderTypeSpec.name!!)}ById"
             funBuilder.addStatement("val fragStateHolder = ${fragmentStateHolderTypeSpec.name!!}()")
@@ -1244,7 +1243,7 @@ class NoVMProcessor(
             entry.value.forEach { propDecl ->
                 val retainAnn = propDecl.getAnnotationsByType(Retain::class).toList().first()
                 // only put into the state holder if we're retaining across config change
-                if (retainAnn.across.contains(StateDestroyingEvent.CONFIGURATION_CHANGE)) {
+                if (retainAnn.across == StateDestroyingEvent.CONFIG_CHANGE) {
                     val resolvedType = propDecl.type.resolve()
                     // TODO consider NOT doing this at all
                     // using a default value is probably not needed / dumb

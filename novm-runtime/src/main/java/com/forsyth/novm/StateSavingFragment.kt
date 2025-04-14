@@ -12,7 +12,7 @@ open class StateSavingFragment : Fragment(), RetainedScopeOwner{
   val stateSaver: StateSaver = provideStateSaver()
 
   open var identificationStrategy: FragmentIdentificationStrategy =
-      FragmentIdentificationStrategy.TAG
+      FragmentIdentificationStrategy.BY_TAG
 
   override val retainedScope: CoroutineScope
     get() = (requireActivity() as StateSavingActivity).retainedScope

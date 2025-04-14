@@ -1,7 +1,7 @@
 package com.forsyth.novm
 
 enum class FragmentIdentificationStrategy {
-    TAG,
-    ID,
-    CLASS
+    BY_TAG,
+    BY_ID,
+    BY_CLASS
 }

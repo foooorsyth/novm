@@ -1,21 +1,17 @@
+@file:Suppress("UNREACHABLE_CODE")
+
 package com.forsyth.novm.compose
 
 import android.annotation.SuppressLint
-import android.content.res.Configuration
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisallowComposableCalls
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.currentCompositeKeyHash
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.autoSaver
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalSavedStateRegistryOwner
 import androidx.compose.ui.platform.LocalView
 import androidx.lifecycle.Lifecycle
@@ -81,6 +77,11 @@ fun <T> retainAcrossConfigChange(
     }
     var nonConfigRegistry = LocalNonConfigStateRegistry.current
     if (nonConfigRegistry == null) { // we didn't use our entry point, find it another way
+        // temporary, below is WIP
+        throw IllegalStateException("Cannot locate NonConfigStateRegistry to store non-config state. " +
+                "Did you use forget to use StateSavingActivity.setContent as your Compose entrypoint?")
+        // ! temporary
+        /*
         val vmso = LocalSavedStateRegistryOwner.current as? ViewModelStoreOwner ?:
                     LocalView.current.findViewTreeViewModelStoreOwner()
         if (vmso == null) {
@@ -105,6 +106,7 @@ fun <T> retainAcrossConfigChange(
                 nonConfigRegistry.dispose()
             }
         }
+        */
     }
     val holder = retainAcrossRecomposition {
         // value is restored using the registry or created via [init] lambda

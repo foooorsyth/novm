@@ -9,7 +9,7 @@ import android.widget.TextView
 import androidx.core.os.bundleOf
 import androidx.fragment.app.add
 import androidx.fragment.app.commit
-import com.forsyth.novm.StateDestroyingEvent.CONFIGURATION_CHANGE
+import com.forsyth.novm.StateDestroyingEvent.CONFIG_CHANGE
 import com.forsyth.novm.StateDestroyingEvent.PROCESS_DEATH
 
 
@@ -21,10 +21,10 @@ class ViewsActivity : StateSavingActivity() {
     companion object {
         private const val TAG = "MainActivity"
     }
-    @Retain(across = [CONFIGURATION_CHANGE])
+    @Retain(across = CONFIG_CHANGE)
     lateinit var largeImage: Bitmap
 
-    @Retain(across = [PROCESS_DEATH])
+    @Retain(across = PROCESS_DEATH)
     lateinit var computedHash: String
 
     override fun onCreate(savedInstanceState: Bundle?) {

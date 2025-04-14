@@ -14,82 +14,82 @@ import java.io.Serializable
 
 
 class BundleSupportedTypesActivity : StateSavingActivity() {
-    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    @Retain(across = StateDestroyingEvent.PROCESS_DEATH)
     lateinit var binder: IBinder
 
-    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    @Retain(across = StateDestroyingEvent.PROCESS_DEATH)
     lateinit var bundle: Bundle
 
-    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    @Retain(across = StateDestroyingEvent.PROCESS_DEATH)
     var byte: Byte = 0x00.toByte() // value change to 0xFF in first onCreate
 
-    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    @Retain(across = StateDestroyingEvent.PROCESS_DEATH)
     lateinit var byteArray: ByteArray
 
-    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    @Retain(across = StateDestroyingEvent.PROCESS_DEATH)
     var ch: Char = 'a' // value change to 'b' in first onCreate
 
-    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    @Retain(across = StateDestroyingEvent.PROCESS_DEATH)
     lateinit var chArr: CharArray
 
-    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    @Retain(across = StateDestroyingEvent.PROCESS_DEATH)
     lateinit var charSeq: CharSequence
 
-    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    @Retain(across = StateDestroyingEvent.PROCESS_DEATH)
     lateinit var charSeqArr: Array<CharSequence>
 
-    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    @Retain(across = StateDestroyingEvent.PROCESS_DEATH)
     lateinit var charSeqArrList: ArrayList<CharSequence>
 
-    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    @Retain(across = StateDestroyingEvent.PROCESS_DEATH)
     var float: Float = 1f // value change to 2f in first onCreate
 
-    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    @Retain(across = StateDestroyingEvent.PROCESS_DEATH)
     lateinit var floatArray: FloatArray
 
-    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    @Retain(across = StateDestroyingEvent.PROCESS_DEATH)
     var int: Int = 1 // value change to 2 in first onCreate
 
-    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    @Retain(across = StateDestroyingEvent.PROCESS_DEATH)
     lateinit var intArray: IntArray
 
-    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    @Retain(across = StateDestroyingEvent.PROCESS_DEATH)
     lateinit var integerArrayList: ArrayList<Int>
 
-    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    @Retain(across = StateDestroyingEvent.PROCESS_DEATH)
     lateinit var parcelable: TestParcelable
 
-    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    @Retain(across = StateDestroyingEvent.PROCESS_DEATH)
     lateinit var parcelableArray: Array<TestParcelable>
 
-    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    @Retain(across = StateDestroyingEvent.PROCESS_DEATH)
     lateinit var parcelableArrayList: ArrayList<TestParcelable>
 
-    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    @Retain(across = StateDestroyingEvent.PROCESS_DEATH)
     lateinit var sparseParcelableArray: SparseArray<TestParcelable>
 
-    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    @Retain(across = StateDestroyingEvent.PROCESS_DEATH)
     lateinit var serializable: Serializable
 
-    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    @Retain(across = StateDestroyingEvent.PROCESS_DEATH)
     var short: Short = 1 // value change to 2 in first onCreate
 
-    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    @Retain(across = StateDestroyingEvent.PROCESS_DEATH)
     lateinit var shortArr: ShortArray
 
-    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    @Retain(across = StateDestroyingEvent.PROCESS_DEATH)
     lateinit var size: Size
 
-    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    @Retain(across = StateDestroyingEvent.PROCESS_DEATH)
     lateinit var sizef: SizeF
 
-    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    @Retain(across = StateDestroyingEvent.PROCESS_DEATH)
     lateinit var str: String
 
-    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    @Retain(across = StateDestroyingEvent.PROCESS_DEATH)
     lateinit var stringArray: Array<String>
 
-    @Retain(across = [StateDestroyingEvent.PROCESS_DEATH])
+    @Retain(across = StateDestroyingEvent.PROCESS_DEATH)
     lateinit var stringArrayList: ArrayList<String>
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -153,7 +153,7 @@ class BundleSupportedTypesActivity : StateSavingActivity() {
         }
         counter += 1
     }
-    @Retain(across = [StateDestroyingEvent.CONFIGURATION_CHANGE])
+    @Retain(across = StateDestroyingEvent.CONFIG_CHANGE)
     var counter = 0
 
     private fun newBinder(): IBinder {

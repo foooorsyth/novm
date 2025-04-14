@@ -1,20 +1,27 @@
 package com.forsyth.novm.compose
 
 import android.annotation.SuppressLint
+import android.content.res.Configuration
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisallowComposableCalls
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.currentCompositeKeyHash
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.autoSaver
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalSavedStateRegistryOwner
 import androidx.compose.ui.platform.LocalView
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.findViewTreeViewModelStoreOwner
-import androidx.navigation.NavBackStackEntry
 import com.forsyth.novm.NonConfigViewModel
 
 @Composable
@@ -77,10 +84,19 @@ fun <T> retainAcrossConfigChange(
         val vmso = LocalSavedStateRegistryOwner.current as? ViewModelStoreOwner ?:
                     LocalView.current.findViewTreeViewModelStoreOwner()
         if (vmso == null) {
-            throw IllegalStateException("bad bad bad")
+            throw IllegalStateException("Cannot locate NonConfigStateRegistry to store non-config state. " +
+                    "Did you use forget to use StateSavingActivity.setContent as your Compose entrypoint?")
         }
         val localView = LocalView.current
-        val vm = vmso.viewModelStore[NonConfigViewModelKey] as? NonConfigViewModel ?: NonConfigViewModel()
+        var vm = vmso.viewModelStore[NonConfigViewModelKey] as? NonConfigViewModel
+        if (vm == null) {
+            vm = NonConfigViewModel()
+            vmso.viewModelStore.put(NonConfigViewModelKey, vm)
+        }
+
+        LifecycleEventEffect(Lifecycle.Event.ON_PAUSE) {
+            vm.performSave()
+        }
         nonConfigRegistry = retainAcrossRecomposition {
             DisposableNonConfigStateRegistryCompose(localView, vm)
         }

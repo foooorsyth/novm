@@ -1,11 +1,10 @@
 [versions]
-activityComposeVersion = "1.10.1"
-agp = "8.9.1"
+agp = "8.9.2"
 asm = "9.8"
 fragmentKtx = "1.8.6"
-coreKtx = "1.15.0"
-gradle = "8.9.1"
-gradleKotlin = "8.9.1"
+coreKtx = "1.16.0"
+gradle = "8.9.2"
+gradleKotlin = "8.9.2"
 junit = "4.13.2"
 junitVersion = "1.2.1"
 espressoCore = "3.6.1"
@@ -16,14 +15,13 @@ activity = "1.10.1"
 constraintlayout = "2.2.1"
 kotlin = "2.1.10"
 ksp = "2.1.10-1.0.31"
-lifecycleRuntimeKtx = "2.6.1"
+lifecycleRuntimeKtx = "2.8.7"
 activityCompose = "1.10.1"
-composeBom = "2024.09.00"
+composeBom = "2025.04.01"
 lifecycleCommonJvm = "2.8.7"
 navigationCompose = "2.8.9"
 
 [libraries]
-androidx-activity-compose-v1100 = { module = "androidx.activity:activity-compose", version.ref = "activityComposeVersion" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-fragment-ktx = { module = "androidx.fragment:fragment-ktx", version.ref = "fragmentKtx" }
 androidx-material = { module = "androidx.compose.material:material" }

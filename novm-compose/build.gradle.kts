@@ -84,11 +84,11 @@ dependencies {
     implementation(project(":novm-runtime"))
     // region COMPOSE
     // TODO just use foundation compose deps
-    val composeBom = platform("androidx.compose:compose-bom:2025.02.00")
+    val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
     androidTestImplementation(composeBom)
     //implementation(libs.material) // TODO investigate
-    implementation(libs.androidx.activity.compose.v1100)
+    implementation(libs.androidx.activity.compose)
     // endregion COMPOSE
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)

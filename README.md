@@ -9,7 +9,7 @@ Then, add the novm runtime and compiler to your module's build.gradle.kts file. 
 novm-compose for Compose support:
 ```kotlin
 dependencies {
-    val novm_version = "1.4.0"
+    val novm_version = "1.4.1"
     implementation("com.forsyth.novm:novm-core:$novm_version")
     implementation("com.forsyth.novm:novm-runtime:$novm_version")
     ksp("com.forsyth.novm:novm-compiler:$novm_version")

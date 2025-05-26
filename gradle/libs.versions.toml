@@ -14,9 +14,11 @@ kotlin = "2.1.10"
 ksp = "2.1.10-1.0.31"
 lifecycle = "2.9.0"
 composeBom = "2025.05.01"
+material = "1.12.0"
+
 
 # region nav3versions
-nav3Core = "1.0.0-alpha01"
+nav3Core = "1.0.0-alpha02"
 nav3Material = "1.0.0-SNAPSHOT"
 nav3Lifecycle = "1.0.0-alpha01"
 kotlinSerialization = "2.1.21"
@@ -50,6 +52,7 @@ androidx-material3 = { group = "androidx.compose.material3", name = "material3" 
 ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
 ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
 androidx-lifecycle-common-jvm = { group = "androidx.lifecycle", name = "lifecycle-common-jvm", version.ref = "lifecycle" }
+material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 
 # region nav3libs
 androidx-navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "nav3Core" }

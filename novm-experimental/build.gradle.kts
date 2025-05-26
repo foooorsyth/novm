@@ -40,18 +40,17 @@ dependencies {
     implementation(project(":novm-runtime"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
+    implementation(libs.material)
+    implementation(platform(libs.androidx.compose.bom))
 
     // region nav3libs
-    implementation(libs.androidx.navigation3.runtime)
-    implementation(libs.androidx.navigation3.ui)
-    implementation(libs.androidx.lifecycle.viewmodel.navigation3)
-    implementation(libs.androidx.material3)
-    implementation(libs.androidx.material3.navigation3)
-    implementation(libs.kotlinx.serialization.core)
-    implementation(libs.kotlinx.serialization.json)
-    implementation("androidx.compose.material3.adaptive:adaptive:1.2.0-alpha06")
-    implementation("androidx.compose.material3.adaptive:adaptive-layout:1.2.0-alpha06")
-    implementation("androidx.compose.material3.adaptive:adaptive-navigation:1.2.0-alpha06")
+//    implementation(libs.androidx.navigation3.runtime)
+//    implementation(libs.androidx.navigation3.ui)
+//    implementation(libs.androidx.lifecycle.viewmodel.navigation3)
+//    implementation(libs.androidx.material3)
+//    implementation(libs.androidx.material3.navigation3)
+//    implementation(libs.kotlinx.serialization.core)
+//    implementation(libs.kotlinx.serialization.json)
     // endregion nav3libs
 
     testImplementation(libs.junit)

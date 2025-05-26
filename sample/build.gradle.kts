@@ -67,6 +67,7 @@ dependencies {
     debugImplementation(libs.ui.tooling)
     implementation(libs.androidx.activity.compose)
     // endregion COMPOSE
+    implementation(libs.material)
     implementation(libs.androidx.fragment.ktx)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)

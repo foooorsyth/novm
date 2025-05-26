@@ -41,6 +41,7 @@ dependencies {
     implementation(project(":novm-core"))
     implementation(project(":novm-runtime"))
     ksp(project(":novm-compiler"))
+    implementation(libs.material)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.activity)

@@ -5,6 +5,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.ViewModel
 
+// TODO investigate nav3
 /**
  * This only exists to deal with NavBackStackEntry, which is final
  * We could get cute and modify NBSE's bytecode, but probably not worth the hassle or build perf hit

@@ -44,33 +44,6 @@ state retention in the event of process death.
 
 All variables annotated with ```@Retain``` must be have ```public``` visibility.
 
-### Fragment support
-
-```kotlin
-import com.forsyth.novm.Retain
-import com.forsyth.novm.StateDestroyingEvent
-import com.forsyth.novm.StateSavingFragment
-class SomeFragment : StateSavingFragment() {
-    @Retain(across = StateDestroyingEvent.CONFIG_CHANGE)
-    lateinit var largeImage: Bitmap
-
-    @Retain(across = StateDestroyingEvent.PROCESS_DEATH)
-    lateinit var computedHash: String
-
-    // Optional override, see below
-    override var identificationStrategy = FragmentIdentificationStrategy.BY_ID
-    // ...
-}
-```
-
-Fragments are identified after recreation based on their ```identificationStrategy```:
-
-```FragmentIdentificationStrategy.BY_TAG``` (default): Fragments are identified by their unique ```tag``` (you must give each of your Fragments using ```@Retain``` a unique tag using this setting)
-
-```FragmentIdentificationStrategy.BY_ID```: Fragments are identified by their ```id```
-
-```FragmentIdentificationStrategy.BY_CLASS```: Fragments are identified by their class
-
 ### Compose support
 
 ```kotlin
@@ -102,16 +75,43 @@ class ComposeActivity : StateSavingActivity() {
 }
 ```
 
-Additionally, [MutableState](https://developer.android.com/reference/kotlin/androidx/compose/runtime/MutableState) 
+Additionally, [MutableState](https://developer.android.com/reference/kotlin/androidx/compose/runtime/MutableState)
 can always be declared in your component scope (Activities & Fragments), annotated with ```@Retain```, and passed into your Compose composition.
 
 ### Coroutine support
 
 ```StateSavingActivity``` offers a ```retainedScope``` field, which is a ```CoroutineScope``` that will
-survive configuration change. Computation spanning multiple configuration changes can be safely executed 
-here. By default, execution occurs on ```Dispatchers.Main``` -- to execute in the background, you can use 
-```withContext(Dispatchers.IO) { ... }```. ```retainedScope```'s lifetime is effectively the same as a 
+survive configuration change. Computation spanning multiple configuration changes can be safely executed
+here. By default, execution occurs on ```Dispatchers.Main``` -- to execute in the background, you can use
+```withContext(Dispatchers.IO) { ... }```. ```retainedScope```'s lifetime is effectively the same as a
 ```viewModelScope``` from a ```ViewModel``` in ```StateSavingActivity```'s ```ViewModelStore```.
+
+### Fragment support
+
+```kotlin
+import com.forsyth.novm.Retain
+import com.forsyth.novm.StateDestroyingEvent
+import com.forsyth.novm.StateSavingFragment
+class SomeFragment : StateSavingFragment() {
+    @Retain(across = StateDestroyingEvent.CONFIG_CHANGE)
+    lateinit var largeImage: Bitmap
+
+    @Retain(across = StateDestroyingEvent.PROCESS_DEATH)
+    lateinit var computedHash: String
+
+    // Optional override, see below
+    override var identificationStrategy = FragmentIdentificationStrategy.BY_ID
+    // ...
+}
+```
+
+Fragments are identified after recreation based on their ```identificationStrategy```:
+
+```FragmentIdentificationStrategy.BY_TAG``` (default): Fragments are identified by their unique ```tag``` (you must give each of your Fragments using ```@Retain``` a unique tag using this setting)
+
+```FragmentIdentificationStrategy.BY_ID```: Fragments are identified by their ```id```
+
+```FragmentIdentificationStrategy.BY_CLASS```: Fragments are identified by their class
 
 ### Multi-module support
 

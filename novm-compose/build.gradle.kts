@@ -87,7 +87,6 @@ dependencies {
     val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
     androidTestImplementation(composeBom)
-    //implementation(libs.material) // TODO investigate
     implementation(libs.androidx.activity.compose)
     // endregion COMPOSE
     implementation(libs.androidx.core.ktx)

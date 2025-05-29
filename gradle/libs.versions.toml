@@ -13,14 +13,15 @@ constraintlayout = "2.2.1"
 kotlin = "2.1.10"
 ksp = "2.1.10-1.0.31"
 lifecycle = "2.9.0"
+lifecycleCompose = "2.9.1" # todo merge with above
 composeBom = "2025.05.01"
 material = "1.12.0"
 
 
 # region nav3versions
 nav3Core = "1.0.0-alpha02"
-nav3Material = "1.0.0-SNAPSHOT"
-nav3Lifecycle = "1.0.0-alpha01"
+material3AdaptiveNav3 = "1.0.0-SNAPSHOT"
+lifecycleViewmodelNav3 = "1.0.0-alpha01"
 kotlinSerialization = "2.1.21"
 kotlinxSerializationCore = "1.8.1"
 # endregion nav3versions
@@ -52,15 +53,16 @@ androidx-material3 = { group = "androidx.compose.material3", name = "material3" 
 ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
 ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
 androidx-lifecycle-common-jvm = { group = "androidx.lifecycle", name = "lifecycle-common-jvm", version.ref = "lifecycle" }
+androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycleCompose" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 
 # region nav3libs
 androidx-navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "nav3Core" }
 androidx-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "nav3Core" }
-androidx-material3-navigation3 = { group = "androidx.compose.material3.adaptive", name = "adaptive-navigation3", version.ref = "nav3Material" }
-androidx-lifecycle-viewmodel-navigation3 = { module = "androidx.lifecycle:lifecycle-viewmodel-navigation3", version.ref = "nav3Lifecycle" }
+
+androidx-material3-adaptive-navigation3 = { group = "androidx.compose.material3.adaptive", name = "adaptive-navigation3", version.ref = "material3AdaptiveNav3" }
+androidx-lifecycle-viewmodel-navigation3 = { module = "androidx.lifecycle:lifecycle-viewmodel-navigation3", version.ref = "lifecycleViewmodelNav3" }
 kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "kotlinxSerializationCore" }
-kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationCore" }
 # endregion nav3libs
 
 

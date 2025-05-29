@@ -10,7 +10,9 @@ pluginManagement {
         mavenCentral()
         gradlePluginPortal()
         mavenLocal()
-        maven { url = uri("https://oss.sonatype.org/content/repositories/snapshots") }
+        maven {
+            url = uri("https://androidx.dev/snapshots/builds/13574637/artifacts/repository")
+        }
     }
 }
 dependencyResolutionManagement {
@@ -19,7 +21,9 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         mavenLocal()
-        maven { url = uri("https://oss.sonatype.org/content/repositories/snapshots") }
+        maven {
+            url = uri("https://androidx.dev/snapshots/builds/13574637/artifacts/repository")
+        }
     }
 }
 
